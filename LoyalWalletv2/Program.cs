@@ -1,6 +1,8 @@
 using LoyalWalletv2;
 using Newtonsoft.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,11 +16,12 @@ builder.Services.AddControllers()
 
 var connection = builder.Configuration.GetConnectionString("DefaultConnection");
 var version = ServerVersion.AutoDetect(connection);
-builder.Services.AddDbContext<Context>(options =>
+builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(connection, version));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 
+builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
