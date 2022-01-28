@@ -15,13 +15,15 @@ public class Customer
     [MaxLength(14)]
     public string PhoneNumber { get; set; }
 
+    public int SerialNumber { get; set; }
+
     [Required] 
     public int CompanyId { get; set; }
-    
+
     [ForeignKey(nameof(CompanyId))]
     public Company Company { get; set; }
 
-    public bool Confirmed { get; set; } = false;
+    public bool Confirmed { get; set; }
 
     public uint CountOfStamps => _countOfStamps;
 

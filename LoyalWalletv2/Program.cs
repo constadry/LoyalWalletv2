@@ -1,4 +1,5 @@
 using LoyalWalletv2;
+using LoyalWalletv2.Controllers;
 using Newtonsoft.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -22,6 +23,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 
 builder.Services.AddAutoMapper(typeof(Program));
+builder.Services.AddHttpClient<OsmiApiController>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

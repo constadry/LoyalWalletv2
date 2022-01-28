@@ -1,11 +1,14 @@
 using AutoMapper;
 using LoyalWalletv2.Domain.Models;
+using LoyalWalletv2.Domain.Models.AuthenticationModels;
 using LoyalWalletv2.Resources;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace LoyalWalletv2.Controllers;
 
+[Authorize(Roles = nameof(EUserRoles.Admin))]
 public class CustomerController : BaseApiController
 {
     private readonly AppDbContext _context;
@@ -81,6 +84,7 @@ public class CustomerController : BaseApiController
         return resultResource;
     }
 
+    [Authorize(Roles = nameof(EUserRoles.User))]
     [HttpPut("add-stamp/{id}")]
     public async Task<CustomerResource> AddStampAsync(int id)
     {
@@ -92,7 +96,8 @@ public class CustomerController : BaseApiController
         var resultResource = _mapper.Map<Customer, CustomerResource>(model);
         return resultResource;
     }
-
+    
+    [Authorize(Roles = nameof(EUserRoles.User))]
     [HttpPut("take-present/{id}")]
     public async Task<CustomerResource> TakeAsync(int id)
     {
