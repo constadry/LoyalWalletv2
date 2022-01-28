@@ -23,7 +23,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 
 builder.Services.AddAutoMapper(typeof(Program));
-builder.Services.AddHttpClient<OsmiApiController>();
+builder.Services.AddHttpClient<OsmiController>();
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
