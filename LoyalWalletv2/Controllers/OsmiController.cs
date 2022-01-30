@@ -34,6 +34,7 @@ public class OsmiController : BaseApiController
         if (existingCustomer is null) throw new Exception("Client isn't exist");
         if (!existingCustomer.Confirmed) throw new Exception("Client isn't confirmed");
         
+        //maybe not work for FormUrlEncodedContent :(
         var labels = JsonSerializer.Serialize(new Dictionary<string, string>
         {
             { "label", "Id клиета" },
@@ -156,7 +157,7 @@ public class OsmiController : BaseApiController
         
         _logger.LogInformation(mes);
 
-        //Если карта ранее создавалась, то как понять, что придёт именно та ссылка, в которой будет карта
+        //CardId (or serial number) allow to find created card
         using var requestMessage =
             new HttpRequestMessage(HttpMethod.Get, OsmiInformation.HostPrefix
                                                    + $"/passes/{cardId}/sms/{phoneNumber}" +
@@ -167,7 +168,7 @@ public class OsmiController : BaseApiController
         return await _httpClient.SendAsync(requestMessage);
     }
 
-    private async Task<string> RegenCode(string phoneNumber, int companyId)
+    private async Task RegenCode(string phoneNumber, int companyId)
     {
         var values = new Dictionary<string, string>
         {
@@ -199,8 +200,6 @@ public class OsmiController : BaseApiController
 
             await _context.Codes.AddAsync(code);
             await _context.SaveChangesAsync();
-            
-            return responseCode;
         }
     }
 }
