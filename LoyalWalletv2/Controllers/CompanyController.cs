@@ -49,8 +49,9 @@ public class CompanyController : BaseApiController
     [HttpPut]
     public async Task<Dictionary<string, object>> UpdateAsync([FromBody] CardOptionsResource cardOptions)
     {
-        if (await _context.Companies.AllAsync(c => c.Name != cardOptions.CompanyName))
-            throw new Exception("Company not found");
+        var company = await _context.Companies
+                          .FirstOrDefaultAsync(c => c.Name != cardOptions.CompanyName) ??
+                      throw new Exception("Company not found");
 
         var values = new Dictionary<string, object>
         {
@@ -66,7 +67,7 @@ public class CompanyController : BaseApiController
                     new
                     {
                         Label = "Количество штампов",
-                        Value = $"{0} / {cardOptions.MaxCountOfStamps}",
+                        Value = $"{0} / {company.MaxCountOfStamps}",
                         changeMsg = "ваши баллы %@",
                         hideLabel = false,
                         forExistingCards = false,

@@ -10,5 +10,4 @@ public class CardOptionsResource
     public int BackgroundColor { get; set; } = Color.White.ToArgb();
     public int TextColor { get; set; } = Color.Black.ToArgb();
     public byte[]? LogotypeImg { get; set; }
-    public int MaxCountOfStamps { get; set; }
 }
