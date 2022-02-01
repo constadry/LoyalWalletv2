@@ -1,91 +1,54 @@
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using AutoMapper;
 using LoyalWalletv2.Domain.Models;
-using LoyalWalletv2.Domain.Models.AuthenticationModels;
+using LoyalWalletv2.Resources;
 using Microsoft.AspNetCore.Authorization;
+using LoyalWalletv2.Domain.Models.AuthenticationModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace LoyalWalletv2.Controllers;
 
-[Authorize(Roles = nameof(EUserRoles.Admin))]
 public class OsmiController : BaseApiController
 {
     private readonly AppDbContext _context;
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
+    private readonly IMapper _mapper;
     private const int serialNumFormat = 10000000;
 
-    public OsmiController(HttpClient httpClient, AppDbContext context, ILogger logger)
+    public OsmiController(
+        HttpClient httpClient,
+        AppDbContext context,
+        ILogger<OsmiController> logger,
+        IMapper mapper)
     {
         _context = context;
         _logger = logger;
         _httpClient = httpClient;
+        _mapper = mapper;
     }
 
     [HttpPost]
-    [Route("cards/generate")]
-    public async Task OsmiCardGenerate([FromBody] string phoneNumber, int companyId)
+    [Route("clients/register")]
+    public async Task CustomerRegister([FromBody] SaveCustomerResource saveCustomerResource)
     {
+        var customer = _mapper
+            .Map<SaveCustomerResource, Customer>(saveCustomerResource);
         var existingCustomer = await _context.Customers
-            .FirstOrDefaultAsync(c => c.PhoneNumber == phoneNumber && c.CompanyId == companyId);
-
-        if (existingCustomer is null) throw new Exception("Client isn't exist");
-        if (!existingCustomer.Confirmed) throw new Exception("Client isn't confirmed");
-        
-        //maybe not work for FormUrlEncodedContent :(
-        var labels = JsonSerializer.Serialize(new Dictionary<string, string>
-        {
-            { "label", "Id клиета" },
-            { "value", $"{existingCustomer.Id}" },
-            { "label", "Количество штампов" },
-            { "value", $"{existingCustomer.CountOfStamps} / {existingCustomer.Company.MaxCountOfStamps}" },
-            { "label", "Номер телефона" },
-            { "value", $"{existingCustomer.PhoneNumber}" },
-            { "label", "Id ресторана" },
-            { "value", $"{existingCustomer.CompanyId}" }
-        });
-
-        var barcode = JsonSerializer.Serialize(new KeyValuePair<string, string>("message", $"{existingCustomer.SerialNumber}"));
-
-        var values = new Dictionary<string, string>
-        {
-            { "noSharing", "false" },
-            { "values", labels},
-            { "barcode",  barcode}
-        };
-        var content = new FormUrlEncodedContent(values);
-                
-        //6tampCardMain?
-        using (var requestMessage =
-               new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
-                                                       + "passes/${card_id}/6tampCardMain?withValues=true"))
-        {
-            requestMessage.Content = content;
-            requestMessage.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
-    
-            await _httpClient.SendAsync(requestMessage);
-        }
-
-        await OsmiSendCardOnSms(
-            existingCustomer.SerialNumber,
-            existingCustomer.PhoneNumber);
-    }
-
-    [HttpPost]
-    [Route("register-client")]
-    public async Task CustomerRegister([FromBody] string phoneNumber, int companyId)
-    {
-        var existingCustomer = await _context.Customers
-            .FirstOrDefaultAsync(c => c.PhoneNumber == phoneNumber && c.CompanyId == companyId);
+            .FirstOrDefaultAsync(c => c.PhoneNumber == customer.PhoneNumber
+                                      && c.CompanyId == customer.CompanyId);
 
         if (existingCustomer is null)
         {
-            await AddNewCustomer(phoneNumber, companyId);
+            await AddNewCustomer(customer.PhoneNumber, customer.CompanyId);
+            _logger.LogInformation("Customer's added");
 
-            await RegenCode(phoneNumber, companyId);
+            await RegenCode(customer.PhoneNumber, customer.CompanyId);
+            _logger.LogInformation("Code's generated");
         }
         else
         {
@@ -95,14 +58,64 @@ public class OsmiController : BaseApiController
                     existingCustomer.PhoneNumber);
             else
             {
-                await RegenCode(phoneNumber, companyId);
+                await RegenCode(customer.PhoneNumber, customer.CompanyId);
             }
         }
     }
 
-    [HttpPost]
-    [Route("confirm-client")]
-    public async Task Confirm([FromBody] string phoneNumber, int companyId, string confirmationCode)
+    private async Task AddNewCustomer([FromBody] string phoneNumber, int companyId)
+    {
+        var rnd = new Random();
+        var serialNumber = (int) rnd.NextDouble() * serialNumFormat;
+
+        var customer = new Customer
+        {
+            CompanyId = companyId,
+            PhoneNumber = phoneNumber,
+            SerialNumber = serialNumber
+        };
+
+        await _context.Customers.AddAsync(customer);
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task RegenCode(string phoneNumber, int companyId)
+    {
+        var values = new Dictionary<string, string>
+        {
+            { "smsText", "Ваш пинкод для транзакции {pin}" },
+            { "length", "4" }
+        };
+
+        var content = new FormUrlEncodedContent(values);
+
+        using var requestMessage =
+            new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
+                                                    + $"/activation/sendpin/{phoneNumber}");
+        requestMessage.Content = content;
+        requestMessage.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
+
+        // var response = await _httpClient.SendAsync(requestMessage);
+
+        //check Code, maybe response type isn't valid
+
+        // var responseCode = await response.Content.ReadAsStringAsync();
+        // _logger.LogInformation(responseCode);
+        var code = new Code
+        {
+            CompanyId = companyId,
+            PhoneNumber = phoneNumber,
+            ConfirmationCode = "1111"
+        };
+
+        await _context.Codes.AddAsync(code);
+        await _context.SaveChangesAsync();
+    }
+
+    [HttpGet]
+    [Route("clients/confirm/{phoneNumber}/{companyId:int}/{confirmationCode}")]
+    public async Task<Dictionary<string, object>> Confirm(string phoneNumber, int companyId, string confirmationCode)
     {
         var sentCodeInfo = await _context.Codes
             .FirstOrDefaultAsync(c => c.PhoneNumber == phoneNumber && c.CompanyId == companyId);
@@ -123,38 +136,96 @@ public class OsmiController : BaseApiController
             requestMessage.Headers.Authorization =
                 new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
     
-            await _httpClient.SendAsync(requestMessage);
+            // await _httpClient.SendAsync(requestMessage);
         }
+
+        if (sentCodeInfo.ConfirmationCode != confirmationCode)
+            throw new Exception("Not valid confirmation code");
 
         var addedCustomer = await _context.Customers
             .FirstOrDefaultAsync(c => c.PhoneNumber == phoneNumber && c.CompanyId == companyId);
         addedCustomer.Confirmed = true;
         await _context.SaveChangesAsync();
 
-        await OsmiCardGenerate(phoneNumber, companyId);
+        return await OsmiCardGenerate(phoneNumber, companyId);
     }
 
-    private async Task AddNewCustomer(string phoneNumber, int companyId)
+    // [Authorize(Roles = nameof(EUserRoles.Admin))]
+    public async Task<Dictionary<string, object>> OsmiCardGenerate(string phoneNumber, int companyId)
     {
-        var rnd = new Random();
-        var serialNumber = (int) rnd.NextDouble() * serialNumFormat;
+        var existingCustomer = await _context.Customers.Include(c => c.Company)
+            .FirstOrDefaultAsync(c => c.PhoneNumber == phoneNumber && c.CompanyId == companyId);
 
-        var customer = new Customer
+        if (existingCustomer is null) throw new Exception("Client isn't exist");
+        if (!existingCustomer.Confirmed) throw new Exception("Client isn't confirmed");
+
+        var values = new Dictionary<string, object>
         {
-            CompanyId = companyId,
-            PhoneNumber = phoneNumber,
-            SerialNumber = serialNumber
+            { "noSharing", "false" },
+            { "values", new []
+            {
+                new
+                {
+                    Label = "Client's id", 
+                    Value = $"{existingCustomer.Id}"
+                },
+                new
+                {
+                    Label = "Количество штампов",
+                    Value = $"{existingCustomer.CountOfStamps} / {existingCustomer.Company.MaxCountOfStamps}"
+                },
+                new
+                {
+                    Label = "Номер телефона",
+                    Value = $"{existingCustomer.PhoneNumber}"
+                },
+                new
+                {
+                    Label = "Id ресторана",
+                    Value = $"{existingCustomer.CompanyId}"
+                },
+            }},
+            { 
+                "barcode", 
+                new
+                {
+                    Message = $"{existingCustomer.SerialNumber}"
+                } 
+            }
         };
 
-        await _context.Customers.AddAsync(customer);
-        await _context.SaveChangesAsync();
+        var serializedValues = JsonSerializer.Serialize(values);
+
+        _logger.LogInformation("values: {Values}", values);
+
+        //6tampCardMain?
+        using (var requestMessage =
+               new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
+                                                       + "passes/${card_id}/6tampCardMain?withValues=true"))
+        {
+            requestMessage.Content = new StringContent(
+                serializedValues,
+                Encoding.UTF8,
+        "application/json");
+
+            requestMessage.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
+    
+            // await _httpClient.SendAsync(requestMessage);
+        }
+
+        await OsmiSendCardOnSms(
+            existingCustomer.SerialNumber,
+            existingCustomer.PhoneNumber);
+        
+        return values;
     }
 
-    private async Task<HttpResponseMessage> OsmiSendCardOnSms(int cardId, string phoneNumber)
+    private async Task OsmiSendCardOnSms(int cardId, string phoneNumber)
     {
         var encoder = UrlEncoder.Create();
         var mes = encoder.Encode("Ваша карта готова");
-        
+
         _logger.LogInformation(mes);
 
         //CardId (or serial number) allow to find created card
@@ -165,41 +236,6 @@ public class OsmiController : BaseApiController
                                                    "{link}&sender=OSMICARDS");
         requestMessage.Headers.Authorization =
             new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
-        return await _httpClient.SendAsync(requestMessage);
-    }
-
-    private async Task RegenCode(string phoneNumber, int companyId)
-    {
-        var values = new Dictionary<string, string>
-        {
-            { "smsText", "Ваш пинкод для транзакции {pin}" },
-            { "length", "4" }
-        };
-
-        var content = new FormUrlEncodedContent(values);
-
-        using (var requestMessage =
-               new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
-                                                       + $"/activation/sendpin/{phoneNumber}"))
-        {
-            requestMessage.Content = content;
-            requestMessage.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
-
-            var response = await _httpClient.SendAsync(requestMessage);
-
-            //check Code, maybe response type isn't valid
-            var responseCode = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation(responseCode);
-            var code = new Code
-            {
-                CompanyId = companyId,
-                PhoneNumber = phoneNumber,
-                ConfirmationCode = responseCode
-            };
-
-            await _context.Codes.AddAsync(code);
-            await _context.SaveChangesAsync();
-        }
+        // return await _httpClient.SendAsync(requestMessage);
     }
 }

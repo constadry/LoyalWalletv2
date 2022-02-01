@@ -3,9 +3,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LoyalWalletv2;
 
-public class AppDbContext : DbContext
+public sealed class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) {}
+    public AppDbContext(DbContextOptions<AppDbContext> options)
+        : base(options)
+    {
+        Database.EnsureCreated();
+    }
     
     public DbSet<Customer> Customers { get; set; }
     public DbSet<Company> Companies { get; set; }
