@@ -13,5 +13,6 @@ public class Employee
     [MaxLength(100)]
     public string? Surname { get; set; }
 
-    [Required] public int CompanyId { get; set; }
+    [Required]
+    public int CompanyId { get; set; }
 }

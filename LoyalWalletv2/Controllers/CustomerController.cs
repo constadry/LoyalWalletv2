@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LoyalWalletv2.Controllers;
 
-[Authorize(Roles = nameof(EUserRoles.Admin))]
+// [Authorize(Roles = nameof(EUserRoles.Admin))]
 public class CustomerController : BaseApiController
 {
     private readonly AppDbContext _context;
