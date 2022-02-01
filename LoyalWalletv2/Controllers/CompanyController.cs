@@ -1,15 +1,20 @@
+using System.Drawing;
+using System.Net.Http.Headers;
+using System.Text;
 using AutoMapper;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Resources;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace LoyalWalletv2.Controllers;
 
 public class CompanyController : BaseApiController
 {
     private readonly AppDbContext _context;
-    private readonly IMapper _mapper;
+    private IMapper _mapper;
 
     public CompanyController(AppDbContext context, IMapper mapper)
     {
@@ -18,11 +23,112 @@ public class CompanyController : BaseApiController
     }
 
     [HttpGet]
-    public async Task<IEnumerable<CompanyResource>> ListAsync()
+    public async Task<IEnumerable<Company>> ListAsync()
     {
-        var query = await _context.Companies.ToListAsync();
-        var queryResource = _mapper
-            .Map<IEnumerable<Company>, IEnumerable<CompanyResource>>(query);
-        return queryResource;
+        return await _context.Companies.ToListAsync();
+    }
+    
+    [HttpGet("get-by/name={name}")]
+    public async Task<Company> GetByName(string? name)
+    {
+        return await _context.Companies.FirstOrDefaultAsync(c => c.Name == name) ??
+                    throw new Exception("Company not found");
+    }
+
+    [HttpPost]
+    public async Task<Company> CreateAsync([FromBody] SaveCompanyResource saveCompanyResource)
+    {
+        var model = _mapper
+            .Map<SaveCompanyResource, Company>(saveCompanyResource);
+        var result = await _context.Companies.AddAsync(model);
+        await _context.SaveChangesAsync();
+
+        return result.Entity;
+    }
+
+    [HttpPut]
+    public async Task<Dictionary<string, object>> UpdateAsync([FromBody] CardOptionsResource cardOptions)
+    {
+        if (await _context.Companies.AllAsync(c => c.Name != cardOptions.CompanyName))
+            throw new Exception("Company not found");
+
+        var values = new Dictionary<string, object>
+        {
+            { "noSharing", "false" },
+            { "limit", "-empty-" },
+            { "logoText", $"{cardOptions.CompanyName}" },
+            { "description", "Основная карта" },
+            { "style", "storeCard" },
+            { "transitType", "-empty-" },
+            {
+                "values", new[]
+                {
+                    new
+                    {
+                        Label = "Количество штампов",
+                        Value = $"{0} / {cardOptions.MaxCountOfStamps}",
+                        changeMsg = "ваши баллы %@",
+                        hideLabel = false,
+                        forExistingCards = false,
+                        //key to change location on the card
+                        key = "B3"
+                    },
+                }
+            },
+            {
+                "barcode", new
+                {
+                    show = true,
+                    showSignature = true,
+                    message = "-serial-",
+                    signature = "-serial-",
+                    format = "QR",
+                    encoding = "iso-8859-1"
+                }
+            },
+            { 
+                "colors", new 
+                {
+                    label = $"{ColorTranslator.ToHtml(Color.FromArgb(cardOptions.TextColor))}",
+                    background = $"{ColorTranslator.ToHtml(Color.FromArgb(cardOptions.BackgroundColor))}",
+                    foreground = "#00BBCC"
+            }},
+            {
+            "images", new {
+                strip = $"{cardOptions.LogotypeImg}",
+                // "icon": "iVBORw0KGgoCD..XNSR0IArs4c6QAAAA"
+                logo = "-empty-"
+        }},
+        };
+
+        var serializedValues = JsonSerializer.Serialize(values);
+        
+        using (var requestMessage =
+               new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
+                                                       + $"templates/{cardOptions.CompanyName}?edit=true"))
+        {
+            requestMessage.Content = new StringContent(
+                serializedValues,
+                Encoding.UTF8,
+                "application/json");
+
+            requestMessage.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
+    
+            // await _httpClient.SendAsync(requestMessage);
+        }
+
+        return values;
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<Company> DeleteAsync(int id)
+    {
+        var model = await _context.Companies.FindAsync(id) ??
+                    throw new Exception("Company not found");
+        var result = _context.Companies.Remove(model);
+        await _context.SaveChangesAsync();
+
+        return result.Entity;
     }
 }
