@@ -1,12 +1,15 @@
 using System.Net.Http.Headers;
+using System.Security.Policy;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Web;
 using AutoMapper;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Resources;
 using Microsoft.AspNetCore.Authorization;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
+using LoyalWalletv2.Tools;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -100,13 +103,17 @@ public class OsmiController : BaseApiController
 
         //check Code, maybe response type isn't valid
 
-        // var responseCode = await response.Content.ReadAsStringAsync();
+        // var responseSerialised = await response.Content.ReadAsStringAsync();
+        // var (_, token) = JsonSerializer.Deserialize<KeyValuePair<string, string>>(responseSerialised);
+
         // _logger.LogInformation(responseCode);
+
         var code = new Code
         {
             CompanyId = companyId,
             PhoneNumber = phoneNumber,
             ConfirmationCode = "1111"
+            // ConfirmationCode = token
         };
 
         await _context.Codes.AddAsync(code);
@@ -140,24 +147,26 @@ public class OsmiController : BaseApiController
         }
 
         if (sentCodeInfo.ConfirmationCode != confirmationCode)
-            throw new Exception("Not valid confirmation code");
+            throw new LoyalWalletException("Not valid confirmation code");
 
         var addedCustomer = await _context.Customers
-            .FirstOrDefaultAsync(c => c.PhoneNumber == phoneNumber && c.CompanyId == companyId);
+            .FirstOrDefaultAsync(c => c.PhoneNumber == phoneNumber && c.CompanyId == companyId)??
+                            throw new LoyalWalletException("Customer not found");
         addedCustomer.Confirmed = true;
         await _context.SaveChangesAsync();
 
         return await OsmiCardGenerate(phoneNumber, companyId);
     }
 
-    // [Authorize(Roles = nameof(EUserRoles.Admin))]
     public async Task<Dictionary<string, object>> OsmiCardGenerate(string phoneNumber, int companyId)
     {
         var existingCustomer = await _context.Customers.Include(c => c.Company)
             .FirstOrDefaultAsync(c => c.PhoneNumber == phoneNumber && c.CompanyId == companyId);
 
-        if (existingCustomer is null) throw new Exception("Client isn't exist");
-        if (!existingCustomer.Confirmed) throw new Exception("Client isn't confirmed");
+        if (existingCustomer is null) throw new LoyalWalletException("Client isn't exist");
+        if (!existingCustomer.Confirmed) throw new LoyalWalletException("Client isn't confirmed");
+
+        var barcode = OsmiInformation.HostPrefix + $"/?serial_number={existingCustomer.SerialNumber}";
 
         var values = new Dictionary<string, object>
         {
@@ -189,7 +198,7 @@ public class OsmiController : BaseApiController
                 "barcode", 
                 new
                 {
-                    Message = $"{existingCustomer.SerialNumber}"
+                    Message = barcode
                 } 
             }
         };
@@ -201,7 +210,8 @@ public class OsmiController : BaseApiController
         //6tampCardMain?
         using (var requestMessage =
                new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
-                                                       + "passes/${card_id}/6tampCardMain?withValues=true"))
+                                                       + $"passes/{existingCustomer.SerialNumber}" +
+                                                       $"/{existingCustomer.Company.Name}?withValues=true"))
         {
             requestMessage.Content = new StringContent(
                 serializedValues,
@@ -237,5 +247,68 @@ public class OsmiController : BaseApiController
         requestMessage.Headers.Authorization =
             new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
         // return await _httpClient.SendAsync(requestMessage);
+    }
+
+    [HttpPost]
+    [Route("cards/check")]
+    public async Task ScanCard([FromBody] string uri)
+    {
+        var uriParam = new Uri(uri);
+        var serialNumberQuery = HttpUtility.ParseQueryString(uriParam.Query).Get("serial_number");
+        if (!int.TryParse(serialNumberQuery, out var serialNUmber))
+            throw new LoyalWalletException($"Invalid value of serial number {serialNumberQuery}");
+        var existingCustomer = await _context.Customers
+                                   .FirstOrDefaultAsync(c => c.SerialNumber == serialNUmber) ??
+                               throw new LoyalWalletException("Customer not found");
+        existingCustomer.AddStamp();
+        await _context.SaveChangesAsync();
+        
+        var values = new Dictionary<string, object>
+        {
+            { "values", new []
+            {
+                new
+                {
+                    Label = "Client's id", 
+                    Value = $"{existingCustomer.Id}"
+                },
+                new
+                {
+                    Label = "Количество штампов",
+                    Value = $"{existingCustomer.CountOfStamps} / {existingCustomer.Company.MaxCountOfStamps}"
+                },
+                new
+                {
+                    Label = "Номер телефона",
+                    Value = $"{existingCustomer.PhoneNumber}"
+                },
+                new
+                {
+                    Label = "Id ресторана",
+                    Value = $"{existingCustomer.CompanyId}"
+                },
+            }},
+        };
+
+        var serializedValues = JsonSerializer.Serialize(values);
+
+        _logger.LogInformation("values: {Values}", values);
+
+        //6tampCardMain?
+        using (var requestMessage =
+               new HttpRequestMessage(HttpMethod.Put, OsmiInformation.HostPrefix
+                                                       + $"passes/{existingCustomer.SerialNumber}" +
+                                                       $"/{existingCustomer.Company.Name}?push=true"))
+        {
+            requestMessage.Content = new StringContent(
+                serializedValues,
+                Encoding.UTF8,
+                "application/json");
+
+            requestMessage.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
+    
+            // await _httpClient.SendAsync(requestMessage);
+        }
     }
 }
