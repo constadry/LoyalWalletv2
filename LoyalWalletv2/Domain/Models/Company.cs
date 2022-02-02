@@ -13,11 +13,9 @@ public class Company
     [MaxLength(14)]
     public string? PhoneNumber { get; set; }
 
-    [MaxLength(100)] 
-    public string? Address { get; set; }
-    
-    //public IList<Location> Locations { get; set; } = new List<Location>();
-    //public IList<Employee> Locations { get; set; } = new List<Employee>();
+    public IList<Location> Locations { get; set; } = new List<Location>();
+
+    public IList<Employee> Employees { get; set; } = new List<Employee>();
 
     public IList<Customer> Customers { get; set; } = new List<Customer>();
 

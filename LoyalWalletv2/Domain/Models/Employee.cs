@@ -15,4 +15,6 @@ public class Employee
 
     [Required]
     public int CompanyId { get; set; }
+
+    public bool Archived { get; set; }
 }

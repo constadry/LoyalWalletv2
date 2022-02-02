@@ -9,7 +9,7 @@ public class Location
 
     [Required]
     [MaxLength(100)]
-    public string? Name { get; set; }
+    public string? Address { get; set; }
 
     [Required]
     public int CompanyId { get; set; }
