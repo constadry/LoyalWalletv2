@@ -1,5 +1,6 @@
 using System.Text;
 using LoyalWalletv2;
+using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Controllers;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
 using Newtonsoft.Json;
@@ -31,8 +32,8 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddIdentity<User, IdentityRole>()  
-    .AddEntityFrameworkStores<AppDbContext>()  
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()  
+    .AddEntityFrameworkStores<AuthenticationContext>()  
     .AddDefaultTokenProviders();
 builder.Services.AddAuthentication(options =>  
     {  

@@ -1,7 +1,7 @@
 using LoyalWalletv2.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace LoyalWalletv2;
+namespace LoyalWalletv2.Contexts;
 
 public sealed class AppDbContext : DbContext
 {

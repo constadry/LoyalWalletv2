@@ -10,12 +10,12 @@ namespace LoyalWalletv2.Controllers;
 
 public class AuthenticateController : BaseApiController
 {
-    private readonly UserManager<User> _userManager;
+    private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly IConfiguration _configuration;
 
     public AuthenticateController(
-        UserManager<User> userManager,
+        UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager,
         IConfiguration configuration)
     {
@@ -27,7 +27,7 @@ public class AuthenticateController : BaseApiController
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginModel model)
     {
-        User user = await _userManager.FindByNameAsync(model.Username);
+        ApplicationUser user = await _userManager.FindByNameAsync(model.Username);
         if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password)) return Unauthorized();
         IList<string> userRoles = await _userManager.GetRolesAsync(user);
 
@@ -62,7 +62,7 @@ public class AuthenticateController : BaseApiController
     [HttpPost("register")]
     public async Task<IActionResult> RegisterUser([FromBody] RegisterModel model)
     {
-        User userExists = await _userManager.FindByNameAsync(model.Username);  
+        ApplicationUser userExists = await _userManager.FindByNameAsync(model.Username);  
         if (userExists != null)
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
@@ -72,7 +72,7 @@ public class AuthenticateController : BaseApiController
                     Message = "User already exists!"
                 });
 
-        var user = new User
+        var user = new ApplicationUser
         {
             Email = model.Email,
             SecurityStamp = Guid.NewGuid().ToString(),
@@ -95,7 +95,7 @@ public class AuthenticateController : BaseApiController
     [HttpPost("register-admin")]
     public async Task<IActionResult> RegisterAdmin([FromBody] RegisterModel model)
     {
-        User userExists = await _userManager.FindByNameAsync(model.Username);
+        ApplicationUser userExists = await _userManager.FindByNameAsync(model.Username);
         if (userExists != null)
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
@@ -105,7 +105,7 @@ public class AuthenticateController : BaseApiController
                 Message = "User already exists!"
             });
 
-        var user = new User
+        var user = new ApplicationUser
         {
             Email = model.Email,
             SecurityStamp = Guid.NewGuid().ToString(),

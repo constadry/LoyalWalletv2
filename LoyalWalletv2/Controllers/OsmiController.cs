@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Web;
 using AutoMapper;
+using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Resources;
 using Microsoft.AspNetCore.Authorization;
@@ -158,7 +159,7 @@ public class OsmiController : BaseApiController
         return await OsmiCardGenerate(phoneNumber, companyId);
     }
 
-    public async Task<Dictionary<string, object>> OsmiCardGenerate(string phoneNumber, int companyId)
+    private async Task<Dictionary<string, object>> OsmiCardGenerate(string phoneNumber, int companyId)
     {
         var existingCustomer = await _context.Customers.Include(c => c.Company)
             .FirstOrDefaultAsync(c => c.PhoneNumber == phoneNumber && c.CompanyId == companyId);

@@ -2,8 +2,11 @@ using System.Drawing;
 using System.Net.Http.Headers;
 using System.Text;
 using AutoMapper;
+using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
+using LoyalWalletv2.Domain.Models.AuthenticationModels;
 using LoyalWalletv2.Resources;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -11,6 +14,7 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace LoyalWalletv2.Controllers;
 
+[Authorize(Roles = nameof(EUserRoles.Admin))]
 public class CompanyController : BaseApiController
 {
     private readonly AppDbContext _context;
@@ -28,6 +32,7 @@ public class CompanyController : BaseApiController
         return await _context.Companies.ToListAsync();
     }
     
+    [Authorize(Roles = nameof(EUserRoles.User))]
     [HttpGet("get-by/name={name}")]
     public async Task<Company> GetByName(string? name)
     {
@@ -47,7 +52,8 @@ public class CompanyController : BaseApiController
     }
 
     [HttpPut]
-    public async Task<Dictionary<string, object>> UpdateAsync([FromBody] CardOptionsResource cardOptions)
+    [Route("card-template/edit")]
+    public async Task<Dictionary<string, object>> UpdateCardAsync([FromBody] CardOptionsResource cardOptions)
     {
         var company = await _context.Companies
                           .FirstOrDefaultAsync(c => c.Name != cardOptions.CompanyName) ??

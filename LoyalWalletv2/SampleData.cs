@@ -1,3 +1,4 @@
+using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
 
 namespace LoyalWalletv2;

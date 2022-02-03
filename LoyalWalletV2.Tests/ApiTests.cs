@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using LoyalWalletv2;
+using LoyalWalletv2.Contexts;
 using Xunit;
 using Xunit.Abstractions;
 

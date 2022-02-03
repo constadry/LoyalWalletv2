@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace LoyalWalletv2.Domain.Models.AuthenticationModels;
 
-public class User : IdentityUser
+public class ApplicationUser : IdentityUser
 {
-    public int EntityId { get; set; }
+    public Company? Company { get; set; }
 }

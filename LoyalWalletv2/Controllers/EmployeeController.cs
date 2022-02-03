@@ -1,10 +1,14 @@
+using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
+using LoyalWalletv2.Domain.Models.AuthenticationModels;
 using LoyalWalletv2.Tools;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace LoyalWalletv2.Controllers;
 
+[Authorize(Roles = nameof(EUserRoles.User))]
 public class EmployeeController : BaseApiController
 {
     private readonly AppDbContext _context;

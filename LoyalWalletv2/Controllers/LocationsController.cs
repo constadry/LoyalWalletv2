@@ -1,10 +1,14 @@
+using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
+using LoyalWalletv2.Domain.Models.AuthenticationModels;
 using LoyalWalletv2.Tools;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace LoyalWalletv2.Controllers;
 
+[Authorize(Roles = nameof(EUserRoles.User))]
 public class LocationsController : BaseApiController
 {
     private readonly AppDbContext _context;
@@ -13,7 +17,7 @@ public class LocationsController : BaseApiController
     {
         _context = context;
     }
-    
+
     [HttpGet("{companyName}")]
     public async Task<IEnumerable<Location>> ListAsync(string? companyName)
     {
@@ -40,7 +44,7 @@ public class LocationsController : BaseApiController
 
         return result.Entity;
     }
-    
+
     [HttpDelete("{id:int}")]
     public async Task<Location> DeleteAsync(int id)
     {

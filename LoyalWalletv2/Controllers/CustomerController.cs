@@ -1,4 +1,5 @@
 using AutoMapper;
+using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
 using LoyalWalletv2.Resources;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LoyalWalletv2.Controllers;
 
-// [Authorize(Roles = nameof(EUserRoles.Admin))]
+[Authorize(Roles = nameof(EUserRoles.User))]
 public class CustomerController : BaseApiController
 {
     private readonly AppDbContext _context;
@@ -60,44 +61,6 @@ public class CustomerController : BaseApiController
         return query.Sum(q => q.CountOfPresents);
     }
 
-    [HttpPost]
-    public async Task<CustomerResource> CreateAsync([FromBody] SaveCustomerResource saveCustomerResource)
-    {
-        var model = _mapper
-            .Map<SaveCustomerResource, Customer>(saveCustomerResource);
-        var result = await _context.Customers.AddAsync(model);
-        await _context.SaveChangesAsync();
-
-        var resultResource = _mapper.Map<Customer, CustomerResource>(result.Entity);
-        return resultResource;
-    }
-
-    [HttpDelete("{id}")]
-    public async Task<CustomerResource> DeleteAsync(int id)
-    {
-        var model = await _context.Customers.FindAsync(id) ??
-                    throw new Exception("Customer not found");
-        var result = _context.Customers.Remove(model);
-        await _context.SaveChangesAsync();
-
-        var resultResource = _mapper.Map<Customer, CustomerResource>(result.Entity);
-        return resultResource;
-    }
-
-    [Authorize(Roles = nameof(EUserRoles.User))]
-    [HttpPut("add-stamp/{id}")]
-    public async Task<CustomerResource> AddStampAsync(int id)
-    {
-        var model = await _context.Customers.FindAsync(id) ??
-                    throw new Exception("Customer not found");
-        model.AddStamp();
-        await _context.SaveChangesAsync();
-
-        var resultResource = _mapper.Map<Customer, CustomerResource>(model);
-        return resultResource;
-    }
-    
-    [Authorize(Roles = nameof(EUserRoles.User))]
     [HttpPut("take-present/{id}")]
     public async Task<CustomerResource> TakeAsync(int id)
     {
