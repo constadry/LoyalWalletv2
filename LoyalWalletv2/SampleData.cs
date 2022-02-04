@@ -1,5 +1,6 @@
 using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace LoyalWalletv2;
 

@@ -40,7 +40,7 @@ public class AuthenticateController : BaseApiController
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginModel model)
     {
-        ApplicationUser user = await _userManager.FindByNameAsync(model.Username);
+        ApplicationUser user = await _userManager.FindByNameAsync(model.Email);
         if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password)) return Unauthorized();
         IList<string> userRoles = await _userManager.GetRolesAsync(user);
 
@@ -77,7 +77,7 @@ public class AuthenticateController : BaseApiController
     {
         try
         {
-            ApplicationUser userExists = await _userManager.FindByNameAsync(model.Username);  
+            ApplicationUser userExists = await _userManager.FindByNameAsync(model.Email);  
             if (userExists != null)
                 return StatusCode(
                     StatusCodes.Status500InternalServerError,
@@ -123,7 +123,7 @@ public class AuthenticateController : BaseApiController
     [HttpPost("register-admin")]
     public async Task<IActionResult> RegisterAdmin([FromBody] RegisterModel model)
     {
-        ApplicationUser userExists = await _userManager.FindByNameAsync(model.Username);
+        ApplicationUser userExists = await _userManager.FindByNameAsync(model.Email);
         if (userExists != null)
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
@@ -137,7 +137,7 @@ public class AuthenticateController : BaseApiController
         {
             Email = model.Email,
             SecurityStamp = Guid.NewGuid().ToString(),
-            UserName = model.Username
+            UserName = model.Email
         };
 
         IdentityResult result = await _userManager.CreateAsync(user, model.Password);
