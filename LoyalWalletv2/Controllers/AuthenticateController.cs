@@ -1,7 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using AutoMapper;
+using LoyalWalletv2.Contexts;
+using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
+using LoyalWalletv2.Resources;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -13,15 +17,24 @@ public class AuthenticateController : BaseApiController
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly IConfiguration _configuration;
+    private readonly AppDbContext _context;
+    private readonly IMapper _mapper;
+    private readonly ILogger<AuthenticateController> _logger;
 
     public AuthenticateController(
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        AppDbContext context,
+        IMapper mapper,
+        ILogger<AuthenticateController> logger)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _configuration = configuration;
+        _context = context;
+        _mapper = mapper;
+        _logger = logger;
     }
 
     [HttpPost("login")]
@@ -62,34 +75,49 @@ public class AuthenticateController : BaseApiController
     [HttpPost("register")]
     public async Task<IActionResult> RegisterUser([FromBody] RegisterModel model)
     {
-        ApplicationUser userExists = await _userManager.FindByNameAsync(model.Username);  
-        if (userExists != null)
-            return StatusCode(
-                StatusCodes.Status500InternalServerError,
-                new Response
-                {
-                    Status = "Error",
-                    Message = "User already exists!"
-                });
-
-        var user = new ApplicationUser
+        try
         {
-            Email = model.Email,
-            SecurityStamp = Guid.NewGuid().ToString(),
-            UserName = model.Username
-        };
-
-        IdentityResult result = await _userManager.CreateAsync(user, model.Password);
-        if (!result.Succeeded)
-            return StatusCode(
-                StatusCodes.Status500InternalServerError,
-                new Response
+            ApplicationUser userExists = await _userManager.FindByNameAsync(model.Username);  
+            if (userExists != null)
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new Response
+                    {
+                        Status = "Error",
+                        Message = "User already exists!"
+                    });
+            
+            var newCompany = await CreateCompanyAsync(
+                new SaveCompanyResource
                 {
-                    Status = "Error",
-                    Message = "User creation failed! Please check user details and try again."
+                    Name = "J"
                 });
 
-        return Ok(new Response { Status = "Success", Message = "User created successfully!" });
+            var user = new ApplicationUser
+            {
+                Email = model.Email,
+                SecurityStamp = Guid.NewGuid().ToString(),
+                UserName = model.Email,
+                CompanyId = newCompany.Id
+            };
+
+            IdentityResult result = await _userManager.CreateAsync(user, model.Password);
+            if (!result.Succeeded)
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new Response
+                    {
+                        Status = "Error",
+                        Message = "User creation failed! Please check user details and try again."
+                    });
+
+            return Ok(new Response { Status = "Success", Message = "User created successfully!" });
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "An error occurred when registering user {Message}", e.Message);
+            throw;
+        }
     }
 
     [HttpPost("register-admin")]
@@ -131,5 +159,15 @@ public class AuthenticateController : BaseApiController
             await _userManager.AddToRoleAsync(user, nameof(EUserRoles.Admin));
 
         return Ok(new Response { Status = "Success", Message = "User created successfully!" });
-    }  
+    }
+
+    private async Task<Company> CreateCompanyAsync(SaveCompanyResource saveCompanyResource)
+    {
+        var model = _mapper
+            .Map<SaveCompanyResource, Company>(saveCompanyResource);
+        var result = await _context.Companies.AddAsync(model);
+        await _context.SaveChangesAsync();
+
+        return result.Entity;
+    }
 }  

@@ -19,11 +19,24 @@ builder.Services.AddControllers()
         options.SerializerSettings.Formatting = Formatting.Indented;
     });
 
-var connection = builder.Configuration.GetConnectionString("DefaultConnection");
+// var connection = builder.Configuration.GetConnectionString("DefaultConnectionMSSQL");
+var connection = builder.Configuration.GetConnectionString("DefaultConnectionMySQL");
 var version = ServerVersion.AutoDetect(connection);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(connection, version));
 
+// builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connection));
+
+// var authConnection = builder.Configuration.GetConnectionString("AuthConnStr");
+// builder.Services.AddDbContext<AuthenticationContext>(options =>
+// {
+//     options.UseSqlServer(authConnection, sqlOptions =>
+//     {
+//         sqlOptions.EnableRetryOnFailure();
+//     });
+// });
+
+// builder.Services.AddDbContext<AuthenticationContext>(options => options.UseSqlServer(authConnection));
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 
 builder.Services.AddAutoMapper(typeof(Program));
@@ -33,7 +46,7 @@ builder.Logging.AddConsole();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()  
-    .AddEntityFrameworkStores<AuthenticationContext>()  
+    .AddEntityFrameworkStores<AppDbContext>()  
     .AddDefaultTokenProviders();
 builder.Services.AddAuthentication(options =>  
     {  

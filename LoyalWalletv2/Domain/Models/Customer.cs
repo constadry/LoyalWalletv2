@@ -12,7 +12,7 @@ public class Customer
     public int Id { get; set; }
 
     [Required]
-    [MaxLength(14)]
+    [MaxLength(20)]
     public string PhoneNumber { get; set; }
 
     public int SerialNumber { get; set; }
