@@ -3,6 +3,7 @@ using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
 using LoyalWalletv2.Resources;
+using LoyalWalletv2.Tools;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -34,7 +35,7 @@ public class CustomerController : BaseApiController
     public CustomerResource GetByPhoneNumber(string phoneNumber)
     {
         var model = _context.Customers.FirstOrDefault(c => c.PhoneNumber == phoneNumber) ??
-                    throw new Exception("Customer not found");
+                    throw new LoyalWalletException("Customer not found");
 
         var resultResource = _mapper.Map<Customer, CustomerResource>(model);
         return resultResource;
@@ -65,7 +66,7 @@ public class CustomerController : BaseApiController
     public async Task<CustomerResource> TakeAsync(int id)
     {
         var model = await _context.Customers.FindAsync(id) ??
-                    throw new Exception("Customer not found");
+                    throw new LoyalWalletException("Customer not found");
         model.AddStamp();
         await _context.SaveChangesAsync();
 

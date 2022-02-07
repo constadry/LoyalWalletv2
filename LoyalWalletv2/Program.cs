@@ -3,6 +3,7 @@ using LoyalWalletv2;
 using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Controllers;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
+using LoyalWalletv2.Services;
 using Newtonsoft.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -45,6 +46,7 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()  
     .AddEntityFrameworkStores<AppDbContext>()  
     .AddDefaultTokenProviders();
@@ -91,6 +93,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

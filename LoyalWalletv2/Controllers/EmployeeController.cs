@@ -18,20 +18,20 @@ public class EmployeeController : BaseApiController
         _context = context;
     }
     
-    [HttpGet("{companyName}")]
-    public async Task<IEnumerable<Employee>> ListAsync(string? companyName)
+    [HttpGet("{companyId:int}")]
+    public async Task<IEnumerable<Employee>> ListAsync(int companyId)
     {
         var company = await _context.Companies.Include(c => c.Employees)
-                          .FirstOrDefaultAsync(c => c.Name == companyName) ??
+                          .FirstOrDefaultAsync(c => c.Id == companyId) ??
                       throw new LoyalWalletException("Company not found");
         return company.Employees;
     }
 
     [HttpGet]
-    [Route("{companyName}/{employeeName}&{employeeSurname}")]
-    public async Task<Employee> GetByName(string? companyName, string? employeeName, string? employeeSurname)
+    [Route("{companyId:int}/{employeeName}&{employeeSurname}")]
+    public async Task<Employee> GetByName(int companyId, string? employeeName, string? employeeSurname)
     {
-        var employees = await ListAsync(companyName);
+        var employees = await ListAsync(companyId);
         return employees.FirstOrDefault(e => e.Name == employeeName && e.Surname == employeeSurname) ??
                throw new LoyalWalletException("Employee not found");
     }
@@ -39,9 +39,7 @@ public class EmployeeController : BaseApiController
     [HttpPut]
     public async Task<Employee> UpdateAsync([FromBody] Employee employee)
     {
-        var company = await _context.Companies.FindAsync(employee.CompanyId) ??
-                      throw new LoyalWalletException("Company not found");
-        var existEmployee = await GetByName(company.Name, employee.Name, employee.Surname);
+        var existEmployee = await GetByName(employee.CompanyId, employee.Name, employee.Surname);
         existEmployee.Archived = employee.Archived;
         await _context.SaveChangesAsync();
 
@@ -61,7 +59,7 @@ public class EmployeeController : BaseApiController
     public async Task<Employee> DeleteAsync(int id)
     {
         var model = await _context.Employees.FindAsync(id) ??
-                    throw new Exception("Company not found");
+                    throw new LoyalWalletException("Employee not found");
         var result = _context.Employees.Remove(model);
         await _context.SaveChangesAsync();
 

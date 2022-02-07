@@ -1,5 +1,4 @@
 using System.Net.Http.Headers;
-using System.Security.Policy;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -8,8 +7,6 @@ using AutoMapper;
 using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Resources;
-using Microsoft.AspNetCore.Authorization;
-using LoyalWalletv2.Domain.Models.AuthenticationModels;
 using LoyalWalletv2.Tools;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

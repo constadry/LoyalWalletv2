@@ -6,6 +6,7 @@ using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
 using LoyalWalletv2.Resources;
+using LoyalWalletv2.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -20,6 +21,7 @@ public class AuthenticateController : BaseApiController
     private readonly AppDbContext _context;
     private readonly IMapper _mapper;
     private readonly ILogger<AuthenticateController> _logger;
+    private readonly IEmailService _emailService;
 
     public AuthenticateController(
         UserManager<ApplicationUser> userManager,
@@ -27,7 +29,8 @@ public class AuthenticateController : BaseApiController
         IConfiguration configuration,
         AppDbContext context,
         IMapper mapper,
-        ILogger<AuthenticateController> logger)
+        ILogger<AuthenticateController> logger,
+        IEmailService emailService)
     {
         _userManager = userManager;
         _roleManager = roleManager;
@@ -35,13 +38,15 @@ public class AuthenticateController : BaseApiController
         _context = context;
         _mapper = mapper;
         _logger = logger;
+        _emailService = emailService;
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginModel model)
     {
         ApplicationUser user = await _userManager.FindByNameAsync(model.Email);
-        if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password)) return Unauthorized();
+        if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
+            return Unauthorized();
         IList<string> userRoles = await _userManager.GetRolesAsync(user);
 
         var authClaims = new List<Claim>
@@ -66,7 +71,7 @@ public class AuthenticateController : BaseApiController
         );
 
         return Ok(new
-        {  
+        {
             token = new JwtSecurityTokenHandler().WriteToken(token),  
             expiration = token.ValidTo
         });
@@ -110,6 +115,22 @@ public class AuthenticateController : BaseApiController
                         Status = "Error",
                         Message = "User creation failed! Please check user details and try again."
                     });
+
+            if (!await _roleManager.RoleExistsAsync(nameof(EUserRoles.User)))
+                await _roleManager.CreateAsync(new IdentityRole(nameof(EUserRoles.User)));
+
+            if (await _roleManager.RoleExistsAsync(nameof(EUserRoles.User)))
+                await _userManager.AddToRoleAsync(user, nameof(EUserRoles.User));
+            
+            var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var callbackUrl = Url.Action(
+                "ConfirmEmail",
+                "Authenticate",
+                new
+                { user.Id, code },
+                HttpContext.Request.Scheme);
+            await _emailService.SendEmailAsync(model.Email, "Confirm your account",
+                $"Подтвердите регистрацию, перейдя по ссылке: <a href='{callbackUrl}'>link</a>");
 
             return Ok(new Response { Status = "Success", Message = "User created successfully!" });
         }
@@ -159,6 +180,43 @@ public class AuthenticateController : BaseApiController
             await _userManager.AddToRoleAsync(user, nameof(EUserRoles.Admin));
 
         return Ok(new Response { Status = "Success", Message = "User created successfully!" });
+    }
+    
+    [HttpGet]
+    public async Task<IActionResult> ConfirmEmail(string? userId, string? code)
+    {
+        if (userId == null || code == null)
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new Response
+                {
+                    Status = "Error",
+                    Message = "User confirmation failed! Please check user details and try again."
+                });
+
+        var userExist = await _userManager.FindByIdAsync(userId);
+
+        if (userExist == null)
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new Response
+                {
+                    Status = "Error",
+                    Message = "User not found."
+                });
+
+        var result = await _userManager.ConfirmEmailAsync(userExist, code);
+
+        if (!result.Succeeded)
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new Response
+                {
+                    Status = "Error",
+                    Message = "User confirmation failed! Please check user details and try again."
+                });
+
+        return Ok(new Response { Status = "Success", Message = "User confirmed successfully!" });
     }
 
     private async Task<Company> CreateCompanyAsync(SaveCompanyResource saveCompanyResource)

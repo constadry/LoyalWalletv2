@@ -6,6 +6,7 @@ using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
 using LoyalWalletv2.Resources;
+using LoyalWalletv2.Tools;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -36,7 +37,7 @@ public class CompanyController : BaseApiController
     public async Task<Company> GetByName(string? name)
     {
         return await _context.Companies.FirstOrDefaultAsync(c => c.Name == name) ??
-                    throw new Exception("Company not found");
+                    throw new LoyalWalletException("Company not found");
     }
 
     [HttpPost]
@@ -131,7 +132,7 @@ public class CompanyController : BaseApiController
     public async Task<Company> DeleteAsync(int id)
     {
         var model = await _context.Companies.FindAsync(id) ??
-                    throw new Exception("Company not found");
+                    throw new LoyalWalletException("Company not found");
         var result = _context.Companies.Remove(model);
         await _context.SaveChangesAsync();
 

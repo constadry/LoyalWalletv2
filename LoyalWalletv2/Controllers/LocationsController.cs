@@ -18,22 +18,22 @@ public class LocationsController : BaseApiController
         _context = context;
     }
 
-    [HttpGet("{companyName}")]
-    public async Task<IEnumerable<Location>> ListAsync(string? companyName)
+    [HttpGet("{companyId:int}")]
+    public async Task<IEnumerable<Location>> ListAsync(int companyId)
     {
         var company = await _context.Companies.Include(c => c.Locations)
-                          .FirstOrDefaultAsync(c => c.Name == companyName) ??
+                          .FirstOrDefaultAsync(c => c.Id == companyId) ??
                       throw new LoyalWalletException("Company not found");
         return company.Locations;
     }
 
     [HttpGet]
-    [Route("{companyName}/{address}")]
-    public async Task<Location> GetByName(string? companyName, string? address)
+    [Route("{companyId:int}/{address}")]
+    public async Task<Location> GetByName(int companyId, string? address)
     {
-        var locations = await ListAsync(companyName);
+        var locations = await ListAsync(companyId);
         return locations.FirstOrDefault(l => l.Address == address) ??
-               throw new LoyalWalletException("Employee not found");
+               throw new LoyalWalletException("Location not found");
     }
 
     [HttpPost]
@@ -49,7 +49,7 @@ public class LocationsController : BaseApiController
     public async Task<Location> DeleteAsync(int id)
     {
         var model = await _context.Locations.FindAsync(id) ??
-                    throw new LoyalWalletException("Company not found");
+                    throw new LoyalWalletException("Location not found");
         var result = _context.Locations.Remove(model);
         await _context.SaveChangesAsync();
 
