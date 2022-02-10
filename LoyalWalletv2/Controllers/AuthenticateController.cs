@@ -97,7 +97,7 @@ public class AuthenticateController : BaseApiController
                         Message = "User already exists!"
                     });
             
-            var newCompany = await CreateCompanyAsync(new SaveCompanyResource());
+            var newCompany = await CreateCompanyAsync();
 
             var user = new ApplicationUser
             {
@@ -179,10 +179,9 @@ public class AuthenticateController : BaseApiController
         return Ok(new Response { Status = "Success", Message = "User confirmed successfully!" });
     }
 
-    private async Task<Company> CreateCompanyAsync(SaveCompanyResource saveCompanyResource)
+    private async Task<Company> CreateCompanyAsync()
     {
-        var model = _mapper
-            .Map<SaveCompanyResource, Company>(saveCompanyResource);
+        var model = new Company();
         var result = await _context.Companies.AddAsync(model);
         await _context.SaveChangesAsync();
 

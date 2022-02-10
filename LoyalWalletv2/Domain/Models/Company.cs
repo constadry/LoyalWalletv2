@@ -13,4 +13,5 @@ public class Company
     public IList<Customer> Customers { get; set; } = new List<Customer>();
     public uint MaxCountOfStamps { get; set; } = 6;
     public ApplicationUser? Account { get; set; }
+    public string? InstagramName { get; set; }
 }

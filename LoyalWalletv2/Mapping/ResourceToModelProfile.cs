@@ -9,6 +9,5 @@ public class ResourceToModelProfile : Profile
     public ResourceToModelProfile()
     {
         CreateMap<SaveCustomerResource, Customer>();
-        CreateMap<SaveCompanyResource, Company>();
     }
 }

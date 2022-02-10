@@ -14,7 +14,6 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace LoyalWalletv2.Controllers;
 
-[Authorize(Roles = nameof(EUserRoles.Admin))]
 public class CompanyController : BaseApiController
 {
     private readonly AppDbContext _context;
@@ -26,13 +25,14 @@ public class CompanyController : BaseApiController
         _mapper = mapper;
     }
 
+    [Authorize(Roles = nameof(EUserRoles.Admin))]
     [HttpGet]
     public async Task<IEnumerable<Company>> ListAsync()
     {
         return await _context.Companies.ToListAsync();
     }
-    
-    [Authorize(Roles = nameof(EUserRoles.User))]
+
+    [Authorize(Roles = nameof(EUserRoles.Admin))]
     [HttpGet("get-by/name={name}")]
     public async Task<Company> GetByName(string? name)
     {
@@ -40,17 +40,26 @@ public class CompanyController : BaseApiController
                     throw new LoyalWalletException("Company not found");
     }
 
-    [HttpPost]
-    public async Task<Company> CreateAsync([FromBody] SaveCompanyResource saveCompanyResource)
+    [Authorize(Roles = nameof(EUserRoles.User))]
+    [HttpPut]
+    [Route("edit")]
+    public async Task<IActionResult> UpdateCompany([FromBody] EditCompanyResource resource)
     {
-        var model = _mapper
-            .Map<SaveCompanyResource, Company>(saveCompanyResource);
-        var result = await _context.Companies.AddAsync(model);
+        var company = await _context.Companies
+            .FirstOrDefaultAsync(c => c.Id == resource.CompanyId);
+
+        if (company is null)
+            return BadRequest("Company not found");
+
+        company.MaxCountOfStamps = resource.MaxCountOfStamps;
+        company.Name = resource.CompanyName;
+        company.InstagramName = resource.InstagramName;
         await _context.SaveChangesAsync();
 
-        return result.Entity;
+        return Ok(company);
     }
 
+    [Authorize(Roles = nameof(EUserRoles.User))]
     [HttpPut]
     [Route("card-template/edit")]
     public async Task<Dictionary<string, object>> UpdateCardAsync([FromBody] CardOptionsResource cardOptions)
@@ -73,6 +82,7 @@ public class CompanyController : BaseApiController
                     new
                     {
                         Label = "Количество штампов",
+                        //maybe changes are affected when card yet used
                         Value = $"{0} / {company.MaxCountOfStamps}",
                         changeMsg = "ваши баллы %@",
                         hideLabel = false,
@@ -105,7 +115,7 @@ public class CompanyController : BaseApiController
                 strip = $"{cardOptions.LogotypeImg}",
                 // "icon": "iVBORw0KGgoCD..XNSR0IArs4c6QAAAA"
                 logo = "-empty-"
-        }},
+            }},
         };
 
         var serializedValues = JsonSerializer.Serialize(values);
@@ -128,6 +138,7 @@ public class CompanyController : BaseApiController
         return values;
     }
 
+    [Authorize(Roles = nameof(EUserRoles.Admin))]
     [HttpDelete("{id}")]
     public async Task<Company> DeleteAsync(int id)
     {
