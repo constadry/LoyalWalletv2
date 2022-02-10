@@ -13,7 +13,7 @@ public class Customer
 
     [Required]
     [MaxLength(20)]
-    public string PhoneNumber { get; set; }
+    public string? PhoneNumber { get; set; }
 
     public int SerialNumber { get; set; }
 
@@ -21,7 +21,7 @@ public class Customer
     public int CompanyId { get; set; }
 
     [ForeignKey(nameof(CompanyId))]
-    public Company Company { get; set; }
+    public Company? Company { get; set; }
 
     public bool Confirmed { get; set; }
 

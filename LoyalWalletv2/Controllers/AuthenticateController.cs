@@ -1,6 +1,9 @@
+using System.Drawing;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using AutoMapper;
 using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
@@ -44,8 +47,9 @@ public class AuthenticateController : BaseApiController
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginModel model)
     {
+        //confirm user check
         ApplicationUser user = await _userManager.FindByNameAsync(model.Email);
-        if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
+        if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password) || !user.EmailConfirmed)
             return Unauthorized();
         IList<string> userRoles = await _userManager.GetRolesAsync(user);
 
@@ -72,7 +76,8 @@ public class AuthenticateController : BaseApiController
 
         return Ok(new
         {
-            token = new JwtSecurityTokenHandler().WriteToken(token),  
+            token = new JwtSecurityTokenHandler().WriteToken(token),
+            companyId = user.CompanyId,
             expiration = token.ValidTo
         });
     }
@@ -92,11 +97,7 @@ public class AuthenticateController : BaseApiController
                         Message = "User already exists!"
                     });
             
-            var newCompany = await CreateCompanyAsync(
-                new SaveCompanyResource
-                {
-                    Name = "J"
-                });
+            var newCompany = await CreateCompanyAsync(new SaveCompanyResource());
 
             var user = new ApplicationUser
             {
@@ -141,60 +142,19 @@ public class AuthenticateController : BaseApiController
         }
     }
 
-    [HttpPost("register-admin")]
-    public async Task<IActionResult> RegisterAdmin([FromBody] RegisterModel model)
-    {
-        ApplicationUser userExists = await _userManager.FindByNameAsync(model.Email);
-        if (userExists != null)
-            return StatusCode(
-                StatusCodes.Status500InternalServerError,
-                new Response
-            {
-                Status = "Error",
-                Message = "User already exists!"
-            });
-
-        var user = new ApplicationUser
-        {
-            Email = model.Email,
-            SecurityStamp = Guid.NewGuid().ToString(),
-            UserName = model.Email
-        };
-
-        IdentityResult result = await _userManager.CreateAsync(user, model.Password);
-        if (!result.Succeeded)
-            return StatusCode(
-                StatusCodes.Status500InternalServerError,
-                new Response
-                {
-                    Status = "Error",
-                    Message = "User creation failed! Please check user details and try again."
-                });
-
-        if (!await _roleManager.RoleExistsAsync(nameof(EUserRoles.Admin)))
-            await _roleManager.CreateAsync(new IdentityRole(nameof(EUserRoles.Admin)));
-        if (!await _roleManager.RoleExistsAsync(nameof(EUserRoles.User)))
-            await _roleManager.CreateAsync(new IdentityRole(nameof(EUserRoles.User)));
-
-        if (await _roleManager.RoleExistsAsync(nameof(EUserRoles.Admin)))
-            await _userManager.AddToRoleAsync(user, nameof(EUserRoles.Admin));
-
-        return Ok(new Response { Status = "Success", Message = "User created successfully!" });
-    }
-    
     [HttpGet]
-    public async Task<IActionResult> ConfirmEmail(string? userId, string? code)
+    public async Task<IActionResult> ConfirmEmail(string? id, string? code)
     {
-        if (userId == null || code == null)
+        if (id == null || code == null)
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
                 new Response
                 {
                     Status = "Error",
-                    Message = "User confirmation failed! Please check user details and try again."
+                    Message = $"User confirmation failed! {nameof(id)} or {nameof(code)} is invalid "
                 });
 
-        var userExist = await _userManager.FindByIdAsync(userId);
+        var userExist = await _userManager.FindByIdAsync(id);
 
         if (userExist == null)
             return StatusCode(
@@ -225,6 +185,77 @@ public class AuthenticateController : BaseApiController
             .Map<SaveCompanyResource, Company>(saveCompanyResource);
         var result = await _context.Companies.AddAsync(model);
         await _context.SaveChangesAsync();
+
+        var cardOptions = new CardOptionsResource
+        {
+            CompanyId = result.Entity.Id,
+        };
+        
+        var values = new Dictionary<string, object>
+        {
+            { "noSharing", "false" },
+            { "limit", "-empty-" },
+            { "logoText", "" },
+            { "description", "Основная карта" },
+            { "style", "storeCard" },
+            { "transitType", "-empty-" },
+            {
+                "values", new[]
+                {
+                    new
+                    {
+                        Label = "Количество штампов",
+                        Value = "0 / 6",
+                        changeMsg = "ваши баллы %@",
+                        hideLabel = false,
+                        forExistingCards = false,
+                        //key to change location on the card
+                        key = "B3"
+                    },
+                }
+            },
+            {
+                "barcode", new
+                {
+                    show = true,
+                    showSignature = true,
+                    message = "-serial-",
+                    signature = "-serial-",
+                    format = "QR",
+                    encoding = "iso-8859-1"
+                }
+            },
+            { 
+                "colors", new 
+                {
+                    label = $"{ColorTranslator.ToHtml(Color.FromArgb(cardOptions.TextColor))}",
+                    background = $"{ColorTranslator.ToHtml(Color.FromArgb(cardOptions.BackgroundColor))}",
+                    foreground = "#00BBCC"
+            }},
+            {
+            "images", new {
+                strip = $"{cardOptions.LogotypeImg}",
+                // "icon": "iVBORw0KGgoCD..XNSR0IArs4c6QAAAA"
+                logo = "-empty-"
+            }},
+        };
+
+        var serializedValues = JsonSerializer.Serialize(values);
+
+        using (var requestMessage =
+               new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
+                                                       + $"templates/{cardOptions.CompanyId}?edit=true"))
+        {
+            requestMessage.Content = new StringContent(
+                serializedValues,
+                Encoding.UTF8,
+                "application/json");
+
+            requestMessage.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
+    
+            // await _httpClient.SendAsync(requestMessage);
+        }
 
         return result.Entity;
     }

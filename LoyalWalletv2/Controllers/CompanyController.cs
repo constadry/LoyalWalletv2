@@ -56,14 +56,14 @@ public class CompanyController : BaseApiController
     public async Task<Dictionary<string, object>> UpdateCardAsync([FromBody] CardOptionsResource cardOptions)
     {
         var company = await _context.Companies
-                          .FirstOrDefaultAsync(c => c.Name != cardOptions.CompanyName) ??
+                          .FirstOrDefaultAsync(c => c.Id == cardOptions.CompanyId) ??
                       throw new Exception("Company not found");
 
         var values = new Dictionary<string, object>
         {
             { "noSharing", "false" },
             { "limit", "-empty-" },
-            { "logoText", $"{cardOptions.CompanyName}" },
+            { "logoText", $"{company.Name}" },
             { "description", "Основная карта" },
             { "style", "storeCard" },
             { "transitType", "-empty-" },
@@ -112,7 +112,7 @@ public class CompanyController : BaseApiController
         
         using (var requestMessage =
                new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
-                                                       + $"templates/{cardOptions.CompanyName}?edit=true"))
+                                                       + $"templates/{cardOptions.CompanyId}?edit=true"))
         {
             requestMessage.Content = new StringContent(
                 serializedValues,
