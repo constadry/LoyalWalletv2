@@ -14,7 +14,7 @@ public class EmailService : IEmailService
     {
         var emailMessage = new MimeMessage();
  
-        emailMessage.From.Add(new MailboxAddress("Администрация сайта", "behappydtworry@gmail.com"));
+        emailMessage.From.Add(new MailboxAddress("Администрация сайта", "noreply@finecard.pro"));
         emailMessage.To.Add(new MailboxAddress("", email));
         emailMessage.Subject = subject;
         emailMessage.Body = new TextPart(MimeKit.Text.TextFormat.Html)
@@ -25,8 +25,8 @@ public class EmailService : IEmailService
         using var client = new SmtpClient();
         try
         {
-            await client.ConnectAsync("smtp.gmail.com", 465, true);
-            await client.AuthenticateAsync("behappydtworry@gmail.com", "$om&Vasily2_2");
+            await client.ConnectAsync("smtp.yandex.ru", 465, true);
+            await client.AuthenticateAsync("noreply@finecard.pro", "umonrsdtybsfpwjj");
             await client.SendAsync(emailMessage);
         }
         catch (Exception e)

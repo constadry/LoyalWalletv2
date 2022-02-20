@@ -22,26 +22,26 @@ public class AuthenticateController : BaseApiController
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly IConfiguration _configuration;
     private readonly AppDbContext _context;
-    private readonly IMapper _mapper;
     private readonly ILogger<AuthenticateController> _logger;
     private readonly IEmailService _emailService;
+    private readonly HttpClient _httpClient;
 
     public AuthenticateController(
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager,
         IConfiguration configuration,
         AppDbContext context,
-        IMapper mapper,
         ILogger<AuthenticateController> logger,
-        IEmailService emailService)
+        IEmailService emailService,
+        HttpClient httpClient)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _configuration = configuration;
         _context = context;
-        _mapper = mapper;
         _logger = logger;
         _emailService = emailService;
+        _httpClient = httpClient;
     }
 
     [HttpPost("login")]
@@ -87,7 +87,7 @@ public class AuthenticateController : BaseApiController
     {
         try
         {
-            ApplicationUser userExists = await _userManager.FindByNameAsync(model.Email);  
+            ApplicationUser userExists = await _userManager.FindByNameAsync(model.Email);
             if (userExists != null)
                 return StatusCode(
                     StatusCodes.Status500InternalServerError,
@@ -96,7 +96,7 @@ public class AuthenticateController : BaseApiController
                         Status = "Error",
                         Message = "User already exists!"
                     });
-            
+
             var newCompany = await CreateCompanyAsync();
 
             var user = new ApplicationUser
@@ -253,7 +253,7 @@ public class AuthenticateController : BaseApiController
             requestMessage.Headers.Authorization =
                 new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
     
-            // await _httpClient.SendAsync(requestMessage);
+            await _httpClient.SendAsync(requestMessage);
         }
 
         return result.Entity;

@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,19 +20,17 @@ builder.Services.AddControllers()
     {
         options.SerializerSettings.Formatting = Formatting.Indented;
     });
-    
-var connection = builder.Configuration.GetConnectionString("DefaultConnectionMSSQL");
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connection));
 
-// var connection = builder.Configuration.GetConnectionString("DefaultConnectionMySQL");
-// var version = ServerVersion.AutoDetect(connection);
-// builder.Services.AddDbContext<AppDbContext>(options =>
-//     options.UseMySql(connection, version));
+var connection = builder.Configuration.GetConnectionString("DefaultConnectionMySQL");
+var version = ServerVersion.AutoDetect(connection);
+builder.Services.AddDbContext<AppDbContext>(options =>
+     options.UseMySql(connection, version));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 
 builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddHttpClient<OsmiController>();
+builder.Services.AddHttpClient<AuthenticateController>();
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Services.AddEndpointsApiExplorer();
@@ -46,6 +45,7 @@ builder.Services.AddAuthentication(options =>
         options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;  
         options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;  
     })
+
     .AddJwtBearer(options =>
     {
         options.SaveToken = true;
@@ -57,8 +57,10 @@ builder.Services.AddAuthentication(options =>
             ValidAudience = builder.Configuration["JWT:ValidAudience"],  
             ValidIssuer = builder.Configuration["JWT:ValidIssuer"],  
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"]))  
-        };  
+        };
     });
+
+builder.Services.AddCors();
 
 var app = builder.Build();
 var scope = app.Services.CreateScope();
@@ -83,7 +85,21 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-//app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+app.UseCors(x => x
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .SetIsOriginAllowed(origin => true) // allow any origin
+                .AllowCredentials());
 
 app.UseAuthentication();
 app.UseAuthorization();

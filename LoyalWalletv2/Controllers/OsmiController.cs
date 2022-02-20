@@ -97,21 +97,18 @@ public class OsmiController : BaseApiController
         requestMessage.Headers.Authorization =
             new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
 
-        // var response = await _httpClient.SendAsync(requestMessage);
+        var response = await _httpClient.SendAsync(requestMessage);
+        
+        var responseSerialised = await response.Content.ReadAsStringAsync();
+        var (_, token) = JsonSerializer.Deserialize<KeyValuePair<string, string>>(responseSerialised);
 
-        //check Code, maybe response type isn't valid
-
-        // var responseSerialised = await response.Content.ReadAsStringAsync();
-        // var (_, token) = JsonSerializer.Deserialize<KeyValuePair<string, string>>(responseSerialised);
-
-        // _logger.LogInformation(responseCode);
+        _logger.LogInformation("Generated code: {Code}", token);
 
         var code = new Code
         {
             CompanyId = companyId,
             PhoneNumber = phoneNumber,
-            ConfirmationCode = "1111"
-            // ConfirmationCode = token
+            ConfirmationCode = token
         };
 
         await _context.Codes.AddAsync(code);
@@ -141,7 +138,7 @@ public class OsmiController : BaseApiController
             requestMessage.Headers.Authorization =
                 new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
     
-            // await _httpClient.SendAsync(requestMessage);
+            await _httpClient.SendAsync(requestMessage);
         }
 
         if (sentCodeInfo.ConfirmationCode != confirmationCode)
@@ -205,7 +202,6 @@ public class OsmiController : BaseApiController
 
         _logger.LogInformation("values: {Values}", values);
 
-        //6tampCardMain?
         using (var requestMessage =
                new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
                                                        + $"passes/{existingCustomer.SerialNumber}" +
@@ -219,7 +215,7 @@ public class OsmiController : BaseApiController
             requestMessage.Headers.Authorization =
                 new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
     
-            // await _httpClient.SendAsync(requestMessage);
+            await _httpClient.SendAsync(requestMessage);
         }
 
         await OsmiSendCardOnSms(
@@ -244,7 +240,7 @@ public class OsmiController : BaseApiController
                                                    "{link}&sender=OSMICARDS");
         requestMessage.Headers.Authorization =
             new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
-        // return await _httpClient.SendAsync(requestMessage);
+        await _httpClient.SendAsync(requestMessage);
     }
 
     [HttpPost]
@@ -306,7 +302,7 @@ public class OsmiController : BaseApiController
             requestMessage.Headers.Authorization =
                 new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
     
-            // await _httpClient.SendAsync(requestMessage);
+            await _httpClient.SendAsync(requestMessage);
         }
     }
 }
