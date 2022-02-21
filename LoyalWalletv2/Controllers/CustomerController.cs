@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using AutoMapper;
 using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
@@ -10,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LoyalWalletv2.Controllers;
 
+[Route("/api/[controller]/{companyId:int}")]
 [Authorize(Roles = nameof(EUserRoles.User))]
 public class CustomerController : BaseApiController
 {
@@ -23,18 +25,19 @@ public class CustomerController : BaseApiController
     }
 
     [HttpGet]
-    public async Task<IEnumerable<CustomerResource>> ListAsync()
+    public async Task<IEnumerable<CustomerResource>> ListAsync(int companyId)
     {
-        var query = await _context.Customers.ToListAsync();
+        var query = await CustomerList(companyId);
         var queryResource = _mapper
             .Map<IEnumerable<Customer>, IEnumerable<CustomerResource>>(query);
         return queryResource;
     }
 
     [HttpGet("phone-number={phoneNumber}")]
-    public CustomerResource GetByPhoneNumber(string phoneNumber)
+    public async Task<CustomerResource> GetByPhoneNumber(string phoneNumber, int companyId)
     {
-        var model = _context.Customers.FirstOrDefault(c => c.PhoneNumber == phoneNumber) ??
+        var queryList = await CustomerList(companyId);
+        var model = queryList.FirstOrDefault(c => c.PhoneNumber == phoneNumber) ??
                     throw new LoyalWalletException("Customer not found");
 
         var resultResource = _mapper.Map<Customer, CustomerResource>(model);
@@ -42,29 +45,30 @@ public class CustomerController : BaseApiController
     }
 
     [HttpGet("all-cards-count")]
-    public async Task<int> AllCardsCount()
+    public async Task<int> AllCardsCount(int companyId)
     {
-        var query = await _context.Customers.ToListAsync();
+        var query = await CustomerList(companyId);
         return query.Count;
     }
 
     [HttpGet("all-stamps-count")]
-    public async Task<long> AllStampsCount()
+    public async Task<long> AllStampsCount(int companyId)
     {
-        var query = await _context.Customers.ToListAsync();
+        var query = await CustomerList(companyId);
         return query.Sum(q => q.CountOfStamps);
     }
 
     [HttpGet("all-presents-count")]
-    public async Task<long> AllPresentsCount()
+    public async Task<long> AllPresentsCount(int companyId)
     {
-        var query = await _context.Customers.ToListAsync();
+        var query = await CustomerList(companyId);
         return query.Sum(q => q.CountOfPresents);
     }
 
-    [HttpPut("take-present/{id}")]
-    public async Task<CustomerResource> TakeAsync(int id)
+    [HttpPut("take-present/{id:int}")]
+    public async Task<CustomerResource> TakeAsync(int id, int companyId)
     {
+        Debug.Assert(_context.Customers != null, "_context.Customers != null");
         var model = await _context.Customers.FindAsync(id) ??
                     throw new LoyalWalletException("Customer not found");
         model.AddStamp();
@@ -72,5 +76,13 @@ public class CustomerController : BaseApiController
 
         var resultResource = _mapper.Map<Customer, CustomerResource>(model);
         return resultResource;
+    }
+
+    private async Task<List<Customer>> CustomerList(int companyId)
+    {
+        Debug.Assert(_context.Customers != null, "_context.Customers != null");
+        return await _context.Customers
+            .Where(c => c.CompanyId == companyId)
+            .ToListAsync();
     }
 }
