@@ -1,7 +1,6 @@
 using System.Drawing;
 using System.Net.Http.Headers;
 using System.Text;
-using AutoMapper;
 using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
@@ -17,12 +16,10 @@ namespace LoyalWalletv2.Controllers;
 public class CompanyController : BaseApiController
 {
     private readonly AppDbContext _context;
-    private IMapper _mapper;
 
-    public CompanyController(AppDbContext context, IMapper mapper)
+    public CompanyController(AppDbContext context)
     {
         _context = context;
-        _mapper = mapper;
     }
 
     [Authorize(Roles = nameof(EUserRoles.Admin))]

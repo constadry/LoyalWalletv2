@@ -53,13 +53,6 @@ public static class SampleData
 
         IdentityResult result = await userManager.CreateAsync(user, model.Password);
         if (!result.Succeeded)
-            // return StatusCode(
-            //     StatusCodes.Status500InternalServerError,
-            //     new Response
-            //     {
-            //         Status = "Error",
-            //         Message = "User creation failed! Please check user details and try again."
-            //     });
             throw new LoyalWalletException(
                 "Admin creation failed! Please check user details and try again.");
 
@@ -70,7 +63,5 @@ public static class SampleData
 
         if (await roleManager.RoleExistsAsync(nameof(EUserRoles.Admin)))
             await userManager.AddToRoleAsync(user, nameof(EUserRoles.Admin));
-
-        // return Ok(new Response { Status = "Success", Message = "User created successfully!" });
     }
 }

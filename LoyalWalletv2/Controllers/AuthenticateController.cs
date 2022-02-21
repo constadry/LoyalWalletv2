@@ -4,7 +4,6 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using AutoMapper;
 using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
@@ -47,7 +46,6 @@ public class AuthenticateController : BaseApiController
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginModel model)
     {
-        //confirm user check
         ApplicationUser user = await _userManager.FindByNameAsync(model.Email);
         if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password) || !user.EmailConfirmed)
             return Unauthorized();

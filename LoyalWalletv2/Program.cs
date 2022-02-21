@@ -98,7 +98,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 app.UseCors(x => x
                 .AllowAnyMethod()
                 .AllowAnyHeader()
-                .SetIsOriginAllowed(origin => true) // allow any origin
+                .SetIsOriginAllowed(_ => true) // allow any origin
                 .AllowCredentials());
 
 app.UseAuthentication();
