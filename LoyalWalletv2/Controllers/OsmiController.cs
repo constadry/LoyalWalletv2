@@ -287,8 +287,7 @@ public class OsmiController : BaseApiController
         var serializedValues = JsonSerializer.Serialize(values);
 
         _logger.LogInformation("values: {Values}", values);
-
-        //6tampCardMain?
+        
         using (var requestMessage =
                new HttpRequestMessage(HttpMethod.Put, OsmiInformation.HostPrefix
                                                        + $"passes/{existingCustomer.SerialNumber}" +
@@ -304,5 +303,34 @@ public class OsmiController : BaseApiController
     
             await _httpClient.SendAsync(requestMessage);
         }
+    }
+
+    [HttpPost("pushmessage")]
+    public async Task Push([FromBody] PushResource pushResource)
+    {
+
+        var values = new Dictionary<string, object?>
+        {
+            {
+                "message", pushResource.Message
+            },
+            {
+                "serials", pushResource.SerialNumbers
+            }
+        };
+
+        var serializedValues = JsonSerializer.Serialize(values);
+
+        using var requestMessage =
+            new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix);
+        requestMessage.Content = new StringContent(
+            serializedValues,
+            Encoding.UTF8,
+            "application/json");
+
+        requestMessage.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
+    
+        await _httpClient.SendAsync(requestMessage);
     }
 }
