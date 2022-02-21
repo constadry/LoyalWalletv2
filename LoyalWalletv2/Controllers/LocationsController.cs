@@ -35,6 +35,16 @@ public class LocationsController : BaseApiController
         return locations.FirstOrDefault(l => l.Address == address) ??
                throw new LoyalWalletException("Location not found");
     }
+    
+    [HttpPut]
+    public async Task<Location> UpdateAsync([FromBody] Location location)
+    {
+        var existLocation = await GetByName(location.CompanyId, location.Address);
+        existLocation.Archived = location.Archived;
+        await _context.SaveChangesAsync();
+
+        return existLocation;
+    }
 
     [HttpPost]
     public async Task<Location> CreateAsync([FromBody] Location location)
