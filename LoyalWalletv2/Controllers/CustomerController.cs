@@ -62,7 +62,7 @@ public class CustomerController : BaseApiController
     public async Task<long> AllPresentsCount(int companyId)
     {
         var query = await CustomerList(companyId);
-        return query.Sum(q => q.CountOfPresents);
+        return query.Sum(q => q.CountOfStoredPresents);
     }
 
     [HttpPut("take-present/{id:int}")]

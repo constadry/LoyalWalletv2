@@ -6,7 +6,9 @@ namespace LoyalWalletv2.Domain.Models;
 public class Customer
 {
     private uint _countOfStamps;
-    private uint _countOfPresents;
+    private uint _countOfPurchases;
+    private uint _countOfStoredPresents;
+    private uint _countOfGivenPresents;
 
     [Key]
     public int Id { get; set; }
@@ -26,24 +28,34 @@ public class Customer
     public bool Confirmed { get; set; }
 
     public uint CountOfStamps => _countOfStamps;
-
-    public uint CountOfPresents => _countOfPresents;
+    public uint CountOfPurchases => _countOfPurchases;
+    public uint CountOfStoredPresents => _countOfStoredPresents;
+    public uint CountOfGivenPresents => _countOfGivenPresents;
+    public DateTime FirstTimePurchase { get; set; }
+    public DateTime LastTimePurchase { get; set; }
 
     public void AddStamp()
     {
         if (CountOfStamps + 1 == Company.MaxCountOfStamps)
         {
             _countOfStamps = 0;
-            _countOfPresents++;
+            _countOfStoredPresents++;
         }
         else
         {
             _countOfStamps++;
         }
+
+        if (_countOfPurchases == 0)
+            FirstTimePurchase = DateTime.Now;
+
+        LastTimePurchase = DateTime.Now;
+        _countOfPurchases++;
     }
 
     public void TakePresent()
     {
-        _countOfPresents--;
+        _countOfStoredPresents--;
+        _countOfGivenPresents++;
     }
 }

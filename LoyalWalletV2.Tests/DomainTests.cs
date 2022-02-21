@@ -44,6 +44,6 @@ public class DomainTests
         
         _customer.TakePresent();
 
-        Assert.Equal(expectedPresents, _customer.CountOfPresents);
+        Assert.Equal(expectedPresents, _customer.CountOfStoredPresents);
     }
 }
