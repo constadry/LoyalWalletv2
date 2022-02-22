@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
@@ -20,8 +21,9 @@ public static class SampleData
         };
 
         var companies = context.Companies;
+        Debug.Assert(companies != null, nameof(companies) + " != null");
         if (!companies.Any())
-            await context.Companies.AddAsync(company);
+            await companies.AddAsync(company);
         await context.SaveChangesAsync();
 
         await RegisterAdmin(userManager, roleManager, company.Id);
@@ -63,5 +65,7 @@ public static class SampleData
 
         if (await roleManager.RoleExistsAsync(nameof(EUserRoles.Admin)))
             await userManager.AddToRoleAsync(user, nameof(EUserRoles.Admin));
+        if (await roleManager.RoleExistsAsync(nameof(EUserRoles.User)))
+            await userManager.AddToRoleAsync(user, nameof(EUserRoles.User));
     }
 }
