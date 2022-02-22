@@ -24,15 +24,19 @@ public class AuthenticateController : BaseApiController
     private readonly ILogger<AuthenticateController> _logger;
     private readonly IEmailService _emailService;
     private readonly HttpClient _httpClient;
+    private ITokenService _tokenService;
 
-    public AuthenticateController(
+    public AuthenticateController
+    (
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager,
         IConfiguration configuration,
         AppDbContext context,
         ILogger<AuthenticateController> logger,
         IEmailService emailService,
-        HttpClient httpClient)
+        HttpClient httpClient, 
+        ITokenService tokenService
+    )
     {
         _userManager = userManager;
         _roleManager = roleManager;
@@ -41,6 +45,7 @@ public class AuthenticateController : BaseApiController
         _logger = logger;
         _emailService = emailService;
         _httpClient = httpClient;
+        _tokenService = tokenService;
     }
 
     [HttpPost("login")]
@@ -249,7 +254,7 @@ public class AuthenticateController : BaseApiController
                 "application/json");
 
             requestMessage.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
+                new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
     
             await _httpClient.SendAsync(requestMessage);
         }

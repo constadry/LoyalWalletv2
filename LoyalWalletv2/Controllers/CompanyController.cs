@@ -5,6 +5,7 @@ using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
 using LoyalWalletv2.Resources;
+using LoyalWalletv2.Services;
 using LoyalWalletv2.Tools;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,10 +17,14 @@ namespace LoyalWalletv2.Controllers;
 public class CompanyController : BaseApiController
 {
     private readonly AppDbContext _context;
+    private readonly ITokenService _tokenService;
+    private readonly HttpClient _httpClient;
 
-    public CompanyController(AppDbContext context)
+    public CompanyController(AppDbContext context, ITokenService tokenService, HttpClient httpClient)
     {
         _context = context;
+        _tokenService = tokenService;
+        _httpClient = httpClient;
     }
 
     [Authorize(Roles = nameof(EUserRoles.Admin))]
@@ -56,9 +61,9 @@ public class CompanyController : BaseApiController
         return Ok(company);
     }
 
-    [Authorize(Roles = nameof(EUserRoles.User))]
     [HttpPut]
     [Route("card-template/edit")]
+    [Authorize(Roles = nameof(EUserRoles.User))]
     public async Task<Dictionary<string, object>> UpdateCardAsync([FromBody] CardOptionsResource cardOptions)
     {
         var company = await _context.Companies
@@ -127,7 +132,7 @@ public class CompanyController : BaseApiController
                 "application/json");
 
             requestMessage.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
+                new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
     
             // await _httpClient.SendAsync(requestMessage);
         }

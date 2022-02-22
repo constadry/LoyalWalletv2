@@ -31,11 +31,13 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddHttpClient<OsmiController>();
 builder.Services.AddHttpClient<AuthenticateController>();
+builder.Services.AddHttpClient<TokenService>();
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()  
     .AddEntityFrameworkStores<AppDbContext>()  
     .AddDefaultTokenProviders();
