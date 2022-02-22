@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -7,6 +8,7 @@ using AutoMapper;
 using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Resources;
+using LoyalWalletv2.Services;
 using LoyalWalletv2.Tools;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,18 +21,21 @@ public class OsmiController : BaseApiController
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
     private readonly IMapper _mapper;
-    private const int serialNumFormat = 10000000;
+    private readonly ITokenService _tokenService;
+    private const int SerialNumFormat = 10000000;
 
     public OsmiController(
         HttpClient httpClient,
         AppDbContext context,
         ILogger<OsmiController> logger,
-        IMapper mapper)
+        IMapper mapper,
+        ITokenService tokenService)
     {
         _context = context;
         _logger = logger;
         _httpClient = httpClient;
         _mapper = mapper;
+        _tokenService = tokenService;
     }
 
     [HttpPost]
@@ -39,6 +44,8 @@ public class OsmiController : BaseApiController
     {
         var customer = _mapper
             .Map<SaveCustomerResource, Customer>(saveCustomerResource);
+        Debug.Assert(customer.PhoneNumber != null, "customer.PhoneNumber != null");
+        Debug.Assert(_context.Customers != null, "_context.Customers != null");
         var existingCustomer = await _context.Customers
             .FirstOrDefaultAsync(c => c.PhoneNumber == customer.PhoneNumber
                                       && c.CompanyId == customer.CompanyId);
@@ -53,10 +60,14 @@ public class OsmiController : BaseApiController
         }
         else
         {
-            if (existingCustomer.Confirmed) 
+            if (existingCustomer.Confirmed)
+            {
+                Debug.Assert(existingCustomer.PhoneNumber != null,
+                    "existingCustomer.PhoneNumber != null");
                 await OsmiSendCardOnSms(
                     existingCustomer.SerialNumber,
                     existingCustomer.PhoneNumber);
+            }
             else
             {
                 await RegenCode(customer.PhoneNumber, customer.CompanyId);
@@ -67,7 +78,7 @@ public class OsmiController : BaseApiController
     private async Task AddNewCustomer([FromBody] string phoneNumber, int companyId)
     {
         var rnd = new Random();
-        var serialNumber = (int) rnd.NextDouble() * serialNumFormat;
+        var serialNumber = (int) rnd.NextDouble() * SerialNumFormat;
 
         var customer = new Customer
         {
@@ -76,6 +87,7 @@ public class OsmiController : BaseApiController
             SerialNumber = serialNumber
         };
 
+        Debug.Assert(_context.Customers != null, "_context.Customers != null");
         await _context.Customers.AddAsync(customer);
         await _context.SaveChangesAsync();
     }
@@ -95,7 +107,7 @@ public class OsmiController : BaseApiController
                                                     + $"/activation/sendpin/{phoneNumber}");
         requestMessage.Content = content;
         requestMessage.Headers.Authorization =
-            new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
+            new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
 
         var response = await _httpClient.SendAsync(requestMessage);
         
@@ -111,6 +123,7 @@ public class OsmiController : BaseApiController
             ConfirmationCode = token
         };
 
+        Debug.Assert(_context.Codes != null, "_context.Codes != null");
         await _context.Codes.AddAsync(code);
         await _context.SaveChangesAsync();
     }
@@ -119,8 +132,11 @@ public class OsmiController : BaseApiController
     [Route("clients/confirm/{phoneNumber}/{companyId:int}/{confirmationCode}")]
     public async Task<Dictionary<string, object>> Confirm(string phoneNumber, int companyId, string confirmationCode)
     {
+        Debug.Assert(_context.Codes != null, "_context.Codes != null");
         var sentCodeInfo = await _context.Codes
-            .FirstOrDefaultAsync(c => c.PhoneNumber == phoneNumber && c.CompanyId == companyId);
+                               .FirstOrDefaultAsync(c => c.PhoneNumber == phoneNumber
+                                                         && c.CompanyId == companyId) ??
+                           throw new LoyalWalletException("confirmation code not found");
 
         var values = new Dictionary<string, string>
         {
@@ -136,7 +152,7 @@ public class OsmiController : BaseApiController
         {
             requestMessage.Content = content;
             requestMessage.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
+                new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
     
             await _httpClient.SendAsync(requestMessage);
         }
@@ -144,8 +160,9 @@ public class OsmiController : BaseApiController
         if (sentCodeInfo.ConfirmationCode != confirmationCode)
             throw new LoyalWalletException("Not valid confirmation code");
 
+        Debug.Assert(_context.Customers != null, "_context.Customers != null");
         var addedCustomer = await _context.Customers
-            .FirstOrDefaultAsync(c => c.PhoneNumber == phoneNumber && c.CompanyId == companyId)??
+                                .FirstOrDefaultAsync(c => c.PhoneNumber == phoneNumber && c.CompanyId == companyId)??
                             throw new LoyalWalletException("Customer not found");
         addedCustomer.Confirmed = true;
         await _context.SaveChangesAsync();
@@ -155,6 +172,7 @@ public class OsmiController : BaseApiController
 
     private async Task<Dictionary<string, object>> OsmiCardGenerate(string phoneNumber, int companyId)
     {
+        Debug.Assert(_context.Customers != null, "_context.Customers != null");
         var existingCustomer = await _context.Customers.Include(c => c.Company)
             .FirstOrDefaultAsync(c => c.PhoneNumber == phoneNumber && c.CompanyId == companyId);
 
@@ -163,6 +181,7 @@ public class OsmiController : BaseApiController
 
         var barcode = OsmiInformation.HostPrefix + $"/?serial_number={existingCustomer.SerialNumber}";
 
+        Debug.Assert(existingCustomer.Company != null, "existingCustomer.Company != null");
         var values = new Dictionary<string, object>
         {
             { "noSharing", "false" },
@@ -210,18 +229,19 @@ public class OsmiController : BaseApiController
             requestMessage.Content = new StringContent(
                 serializedValues,
                 Encoding.UTF8,
-        "application/json");
+                "application/json");
 
             requestMessage.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
-    
+                new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
+
             await _httpClient.SendAsync(requestMessage);
         }
 
+        Debug.Assert(existingCustomer.PhoneNumber != null, "existingCustomer.PhoneNumber != null");
         await OsmiSendCardOnSms(
             existingCustomer.SerialNumber,
             existingCustomer.PhoneNumber);
-        
+    
         return values;
     }
 
@@ -230,7 +250,7 @@ public class OsmiController : BaseApiController
         var encoder = UrlEncoder.Create();
         var mes = encoder.Encode("Ваша карта готова");
 
-        _logger.LogInformation(mes);
+        _logger.LogInformation("Encode {Message}", mes);
 
         //CardId (or serial number) allow to find created card
         using var requestMessage =
@@ -239,7 +259,7 @@ public class OsmiController : BaseApiController
                                                    $"?message={mes}" +
                                                    "{link}&sender=OSMICARDS");
         requestMessage.Headers.Authorization =
-            new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
+            new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
         await _httpClient.SendAsync(requestMessage);
     }
 
@@ -251,12 +271,14 @@ public class OsmiController : BaseApiController
         var serialNumberQuery = HttpUtility.ParseQueryString(uriParam.Query).Get("serial_number");
         if (!int.TryParse(serialNumberQuery, out var serialNUmber))
             throw new LoyalWalletException($"Invalid value of serial number {serialNumberQuery}");
+        Debug.Assert(_context.Customers != null, "_context.Customers != null");
         var existingCustomer = await _context.Customers
                                    .FirstOrDefaultAsync(c => c.SerialNumber == serialNUmber) ??
                                throw new LoyalWalletException("Customer not found");
         existingCustomer.AddStamp();
         await _context.SaveChangesAsync();
-        
+
+        Debug.Assert(existingCustomer.Company != null, "existingCustomer.Company != null");
         var values = new Dictionary<string, object>
         {
             { "values", new []
@@ -287,22 +309,20 @@ public class OsmiController : BaseApiController
         var serializedValues = JsonSerializer.Serialize(values);
 
         _logger.LogInformation("values: {Values}", values);
-        
-        using (var requestMessage =
-               new HttpRequestMessage(HttpMethod.Put, OsmiInformation.HostPrefix
-                                                       + $"passes/{existingCustomer.SerialNumber}" +
-                                                       $"/{existingCustomer.Company.Name}?push=true"))
-        {
-            requestMessage.Content = new StringContent(
-                serializedValues,
-                Encoding.UTF8,
-                "application/json");
 
-            requestMessage.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
+        using var requestMessage =
+            new HttpRequestMessage(HttpMethod.Put, OsmiInformation.HostPrefix
+                                                   + $"passes/{existingCustomer.SerialNumber}" +
+                                                   $"/{existingCustomer.Company.Name}?push=true");
+        requestMessage.Content = new StringContent(
+            serializedValues,
+            Encoding.UTF8,
+            "application/json");
+
+        requestMessage.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
     
-            await _httpClient.SendAsync(requestMessage);
-        }
+        await _httpClient.SendAsync(requestMessage);
     }
 
     [HttpPost("pushmessage")]
@@ -329,7 +349,7 @@ public class OsmiController : BaseApiController
             "application/json");
 
         requestMessage.Headers.Authorization =
-            new AuthenticationHeaderValue("Bearer", OsmiInformation.Token);
+            new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
     
         await _httpClient.SendAsync(requestMessage);
     }
