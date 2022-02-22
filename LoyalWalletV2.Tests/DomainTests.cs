@@ -34,7 +34,7 @@ public class DomainTests
     {
         const uint expectedStamps = 1;
 
-        _customer.AddStamp(_employee);
+        _customer.DoStamp(_employee);
 
         Assert.Equal(expectedStamps, _customer.CountOfStamps);
         Assert.Equal(expectedStamps, _employee.CountOfStamps);
@@ -47,7 +47,7 @@ public class DomainTests
         const uint expectedGivenPresents = 1;
 
         var i = 0;
-        for (; i < 6; i++) _customer.AddStamp(_employee);
+        for (; i < 6; i++) _customer.DoStamp(_employee);
         
         _customer.TakePresent(_employee);
 

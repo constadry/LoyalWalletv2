@@ -75,7 +75,9 @@ public class CustomerController : BaseApiController
         Debug.Assert(_context.Employees != null, "_context.Employees != null");
         var employee = await _context.Employees.FindAsync(employeeId) ??
                        throw new LoyalWalletException($"Employee by id: {employeeId} not found");
-        model.AddStamp(employee);
+        var scan = model.TakePresent(employee);
+        Debug.Assert(_context.Scans != null, "_context.Scans != null");
+        await _context.Scans.AddAsync(scan);
         await _context.SaveChangesAsync();
 
         var resultResource = _mapper.Map<Customer, CustomerResource>(model);

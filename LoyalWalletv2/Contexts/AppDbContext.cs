@@ -19,4 +19,5 @@ public sealed class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Location>? Locations { get; set; }
     public DbSet<Company>? Companies { get; set; }
     public DbSet<Code>? Codes { get; set; }
+    public DbSet<Scan>? Scans { get; set; }
 }

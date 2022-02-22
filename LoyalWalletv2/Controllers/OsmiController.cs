@@ -282,7 +282,9 @@ public class OsmiController : BaseApiController
         Debug.Assert(_context.Employees != null, "_context.Employees != null");
         var employee = await _context.Employees.FindAsync(employeeId) ??
                        throw new LoyalWalletException($"Employee by id: {employeeId} not found");
-        existingCustomer.AddStamp(employee);
+        var scan = existingCustomer.DoStamp(employee);
+        Debug.Assert(_context.Scans != null, "_context.Stamps != null");
+        await _context.Scans.AddAsync(scan);
         await _context.SaveChangesAsync();
 
         Debug.Assert(existingCustomer.Company != null, "existingCustomer.Company != null");
