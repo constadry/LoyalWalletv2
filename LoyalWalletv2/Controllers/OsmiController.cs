@@ -232,12 +232,13 @@ public class OsmiController : BaseApiController
                 "application/json");
 
             requestMessage.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
+                    new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
 
             await _httpClient.SendAsync(requestMessage);
         }
 
-        Debug.Assert(existingCustomer.PhoneNumber != null, "existingCustomer.PhoneNumber != null");
+        Debug.Assert(existingCustomer.PhoneNumber != null,
+            "existingCustomer.PhoneNumber != null");
         await OsmiSendCardOnSms(
             existingCustomer.SerialNumber,
             existingCustomer.PhoneNumber);
@@ -264,18 +265,24 @@ public class OsmiController : BaseApiController
     }
 
     [HttpPost]
-    [Route("cards/check")]
-    public async Task ScanCard([FromBody] string uri)
+    [Route("cards/check/{employeeId:int}")]
+    public async Task ScanCard([FromBody] string uri, int employeeId)
     {
         var uriParam = new Uri(uri);
         var serialNumberQuery = HttpUtility.ParseQueryString(uriParam.Query).Get("serial_number");
+
         if (!int.TryParse(serialNumberQuery, out var serialNUmber))
             throw new LoyalWalletException($"Invalid value of serial number {serialNumberQuery}");
+
         Debug.Assert(_context.Customers != null, "_context.Customers != null");
         var existingCustomer = await _context.Customers
                                    .FirstOrDefaultAsync(c => c.SerialNumber == serialNUmber) ??
                                throw new LoyalWalletException("Customer not found");
-        existingCustomer.AddStamp();
+
+        Debug.Assert(_context.Employees != null, "_context.Employees != null");
+        var employee = await _context.Employees.FindAsync(employeeId) ??
+                       throw new LoyalWalletException($"Employee by id: {employeeId} not found");
+        existingCustomer.AddStamp(employee);
         await _context.SaveChangesAsync();
 
         Debug.Assert(existingCustomer.Company != null, "existingCustomer.Company != null");
