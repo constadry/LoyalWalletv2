@@ -15,4 +15,7 @@ public class Employee
     public Location? Location { get; set; }
     [ForeignKey(nameof(Location))]
     public int LocationId { get; set; }
+
+    public uint CountOfStamps { get; set; }
+    public uint CountOfPresents { get; set; }
 }

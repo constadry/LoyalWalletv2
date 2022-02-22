@@ -34,9 +34,9 @@ public class Customer
     public DateTime FirstTimePurchase { get; set; }
     public DateTime LastTimePurchase { get; set; }
 
-    public void AddStamp()
+    public void AddStamp(Employee employee)
     {
-        if (CountOfStamps + 1 == Company.MaxCountOfStamps)
+        if (Company != null && CountOfStamps + 1 == Company.MaxCountOfStamps)
         {
             _countOfStamps = 0;
             _countOfStoredPresents++;
@@ -51,11 +51,14 @@ public class Customer
 
         LastTimePurchase = DateTime.Now;
         _countOfPurchases++;
+
+        employee.CountOfStamps += 1;
     }
 
-    public void TakePresent()
+    public void TakePresent(Employee employee)
     {
         _countOfStoredPresents--;
         _countOfGivenPresents++;
+        employee.CountOfPresents += 1;
     }
 }

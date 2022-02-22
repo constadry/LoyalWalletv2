@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using LoyalWalletv2.Contexts;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
@@ -21,6 +22,7 @@ public class EmployeeController : BaseApiController
     [HttpGet("{companyId:int}")]
     public async Task<IEnumerable<Employee>> ListAsync(int companyId)
     {
+        Debug.Assert(_context.Companies != null, "_context.Companies != null");
         var company = await _context.Companies.Include(c => c.Employees)
                           .FirstOrDefaultAsync(c => c.Id == companyId) ??
                       throw new LoyalWalletException("Company not found");
@@ -49,6 +51,7 @@ public class EmployeeController : BaseApiController
     [HttpPost]
     public async Task<Employee> CreateAsync([FromBody] Employee employee)
     {
+        Debug.Assert(_context.Employees != null, "_context.Employees != null");
         var result = await _context.Employees.AddAsync(employee);
         await _context.SaveChangesAsync();
 
@@ -58,6 +61,7 @@ public class EmployeeController : BaseApiController
     [HttpDelete("{id:int}")]
     public async Task<Employee> DeleteAsync(int id)
     {
+        Debug.Assert(_context.Employees != null, "_context.Employees != null");
         var model = await _context.Employees.FindAsync(id) ??
                     throw new LoyalWalletException("Employee not found");
         var result = _context.Employees.Remove(model);

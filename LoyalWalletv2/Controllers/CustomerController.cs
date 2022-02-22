@@ -65,13 +65,17 @@ public class CustomerController : BaseApiController
         return query.Sum(q => q.CountOfStoredPresents);
     }
 
-    [HttpPut("take-present/{id:int}")]
-    public async Task<CustomerResource> TakeAsync(int id, int companyId)
+    [HttpPut("take-present/{id:int}/{employeeId:int}")]
+    public async Task<CustomerResource> TakeAsync(int id, int companyId, int employeeId)
     {
         Debug.Assert(_context.Customers != null, "_context.Customers != null");
         var model = await _context.Customers.FindAsync(id) ??
                     throw new LoyalWalletException("Customer not found");
-        model.AddStamp();
+
+        Debug.Assert(_context.Employees != null, "_context.Employees != null");
+        var employee = await _context.Employees.FindAsync(employeeId) ??
+                       throw new LoyalWalletException($"Employee by id: {employeeId} not found");
+        model.AddStamp(employee);
         await _context.SaveChangesAsync();
 
         var resultResource = _mapper.Map<Customer, CustomerResource>(model);
