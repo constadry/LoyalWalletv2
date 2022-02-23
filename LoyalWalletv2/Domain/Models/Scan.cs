@@ -8,4 +8,6 @@ public class Scan
     public DateTime ScanDate { get; set; }
     public int EmployeeId { get; set; }
     public int CustomerId { get; set; }
+    public int CompanyId { get; set; }
+    
 }
