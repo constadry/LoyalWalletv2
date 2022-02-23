@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Drawing;
 using System.Net.Http.Headers;
 using System.Text;
@@ -31,6 +32,7 @@ public class CompanyController : BaseApiController
     [HttpGet]
     public async Task<IEnumerable<Company>> ListAsync()
     {
+        Debug.Assert(_context.Companies != null, "_context.Companies != null");
         return await _context.Companies.ToListAsync();
     }
 
@@ -38,8 +40,9 @@ public class CompanyController : BaseApiController
     [HttpGet("get-by/name={name}")]
     public async Task<Company> GetByName(string? name)
     {
+        Debug.Assert(_context.Companies != null, "_context.Companies != null");
         return await _context.Companies.FirstOrDefaultAsync(c => c.Name == name) ??
-                    throw new LoyalWalletException("Company not found");
+               throw new LoyalWalletException("Company not found");
     }
 
     [Authorize(Roles = nameof(EUserRoles.User))]
@@ -47,6 +50,7 @@ public class CompanyController : BaseApiController
     [Route("edit")]
     public async Task<IActionResult> UpdateCompany([FromBody] EditCompanyResource resource)
     {
+        Debug.Assert(_context.Companies != null, "_context.Companies != null");
         var company = await _context.Companies
             .FirstOrDefaultAsync(c => c.Id == resource.CompanyId);
 
@@ -66,6 +70,7 @@ public class CompanyController : BaseApiController
     [Authorize(Roles = nameof(EUserRoles.User))]
     public async Task<Dictionary<string, object>> UpdateCardAsync([FromBody] CardOptionsResource cardOptions)
     {
+        Debug.Assert(_context.Companies != null, "_context.Companies != null");
         var company = await _context.Companies
                           .FirstOrDefaultAsync(c => c.Id == cardOptions.CompanyId) ??
                       throw new Exception("Company not found");
@@ -144,6 +149,7 @@ public class CompanyController : BaseApiController
     [HttpDelete("{id}")]
     public async Task<Company> DeleteAsync(int id)
     {
+        Debug.Assert(_context.Companies != null, "_context.Companies != null");
         var model = await _context.Companies.FindAsync(id) ??
                     throw new LoyalWalletException("Company not found");
         var result = _context.Companies.Remove(model);
