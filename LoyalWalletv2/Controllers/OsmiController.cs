@@ -179,7 +179,8 @@ public class OsmiController : BaseApiController
         if (existingCustomer is null) throw new LoyalWalletException("Client isn't exist");
         if (!existingCustomer.Confirmed) throw new LoyalWalletException("Client isn't confirmed");
 
-        var barcode = OsmiInformation.HostPrefix + $"/?serial_number={existingCustomer.SerialNumber}";
+        var barcode = OsmiInformation.HostPrefix
+                      + $"/?serial_number={existingCustomer.SerialNumber}&company_id={companyId}";
 
         Debug.Assert(existingCustomer.Company != null, "existingCustomer.Company != null");
         var values = new Dictionary<string, object>
@@ -269,10 +270,15 @@ public class OsmiController : BaseApiController
     public async Task ScanCard([FromBody] string uri, int employeeId)
     {
         var uriParam = new Uri(uri);
-        var serialNumberQuery = HttpUtility.ParseQueryString(uriParam.Query).Get("serial_number");
+        var uriCollection = HttpUtility.ParseQueryString(uriParam.Query);
+        var serialNumberQuery = uriCollection.Get("serial_number");
+        var companyIdQuery = uriCollection.Get("company_id");
 
         if (!int.TryParse(serialNumberQuery, out var serialNUmber))
             throw new LoyalWalletException($"Invalid value of serial number {serialNumberQuery}");
+        
+        if (!int.TryParse(companyIdQuery, out var companyId))
+            throw new LoyalWalletException($"Invalid value of company id {companyIdQuery}");
 
         Debug.Assert(_context.Customers != null, "_context.Customers != null");
         var existingCustomer = await _context.Customers
@@ -282,9 +288,20 @@ public class OsmiController : BaseApiController
         Debug.Assert(_context.Employees != null, "_context.Employees != null");
         var employee = await _context.Employees.FindAsync(employeeId) ??
                        throw new LoyalWalletException($"Employee by id: {employeeId} not found");
-        var scan = existingCustomer.DoStamp(employee);
+
+        existingCustomer.DoStamp(employee);
+
+        var scan = new Scan
+        {
+            CustomerId = existingCustomer.Id,
+            EmployeeId = employee.Id,
+            CompanyId = companyId,
+            ScanDate = DateTime.Now
+        };
+
         Debug.Assert(_context.Scans != null, "_context.Stamps != null");
         await _context.Scans.AddAsync(scan);
+
         await _context.SaveChangesAsync();
 
         Debug.Assert(existingCustomer.Company != null, "existingCustomer.Company != null");
