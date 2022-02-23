@@ -69,4 +69,47 @@ public class EmployeeController : BaseApiController
 
         return result.Entity;
     }
+
+    [HttpGet("count-of-stamps/{employeeId:int}")]
+    public async Task<uint> CountOfStamps(int employeeId, string? locationName, DateTime? startDate,
+        DateTime? endDate)
+    {
+        var scans = await ScansList(employeeId, locationName, startDate, endDate);
+        Debug.Assert(_context.Employees != null, "_context.Customers != null");
+        var query = await _context.Employees.FirstOrDefaultAsync(c => scans.Any(s => s.EmployeeId == c.Id))
+                    ?? throw new LoyalWalletException("Employee not found");
+        return query.CountOfStamps;
+    }
+    
+    [HttpGet("count-of-presents/{employeeId:int}")]
+    public async Task<uint> CountOfPresents(int employeeId, string? locationName, DateTime? startDate,
+        DateTime? endDate)
+    {
+        var scans = await ScansList(employeeId, locationName, startDate, endDate);
+        Debug.Assert(_context.Employees != null, "_context.Customers != null");
+        var query = await _context.Employees.FirstOrDefaultAsync(c => scans.Any(s => s.EmployeeId == c.Id))
+                    ?? throw new LoyalWalletException("Employee not found");
+        return query.CountOfStamps;
+    }
+    
+    private async Task<List<Scan>> ScansList(int employeeId, string? locationName, DateTime? startDate,
+        DateTime? endDate)
+    {
+        Debug.Assert(_context.Scans != null, "_context.Scans != null");
+        Debug.Assert(_context.Locations != null, "_context.Locations != null");
+        var scans = _context.Scans
+            .Where(s => s.EmployeeId == employeeId);
+        
+        if (locationName != null)
+        {
+            var location = await _context.Locations
+                               .FirstOrDefaultAsync(l => l.Name == locationName) ??
+                           throw new LoyalWalletException($"location this name {locationName} not found");
+            scans = scans.Where(s => s.CompanyId == location.CompanyId);
+        }
+
+        if (startDate != null && endDate != null)
+            scans = scans.Where(s => s.ScanDate >= startDate && s.ScanDate <= endDate);
+        return scans.ToList();
+    }
 }
