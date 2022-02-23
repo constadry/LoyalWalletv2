@@ -38,6 +38,16 @@ public class EmployeeController : BaseApiController
                throw new LoyalWalletException("Employee not found");
     }
 
+    [HttpPost]
+    public async Task<Employee> CreateAsync([FromBody] Employee employee)
+    {
+        Debug.Assert(_context.Employees != null, "_context.Employees != null");
+        var result = await _context.Employees.AddAsync(employee);
+        await _context.SaveChangesAsync();
+
+        return result.Entity;
+    }
+
     [HttpPut]
     public async Task<Employee> UpdateAsync([FromBody] Employee employee)
     {
@@ -48,16 +58,6 @@ public class EmployeeController : BaseApiController
         return existEmployee;
     }
 
-    [HttpPost]
-    public async Task<Employee> CreateAsync([FromBody] Employee employee)
-    {
-        Debug.Assert(_context.Employees != null, "_context.Employees != null");
-        var result = await _context.Employees.AddAsync(employee);
-        await _context.SaveChangesAsync();
-
-        return result.Entity;
-    }
-    
     [HttpDelete("{id:int}")]
     public async Task<Employee> DeleteAsync(int id)
     {
