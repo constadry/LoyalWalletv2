@@ -34,7 +34,7 @@ public class Customer
     public DateTime FirstTimePurchase { get; set; }
     public DateTime LastTimePurchase { get; set; }
 
-    public Scan DoStamp(Employee employee)
+    public void DoStamp(Employee employee)
     {
         if (Company != null && CountOfStamps + 1 == Company.MaxCountOfStamps)
         {
@@ -53,26 +53,12 @@ public class Customer
         _countOfPurchases++;
 
         employee.CountOfStamps += 1;
-        
-        return new Scan
-        {
-            CustomerId = Id,
-            EmployeeId = employee.Id,
-            ScanDate = DateTime.Now
-        };
     }
 
-    public Scan TakePresent(Employee employee)
+    public void TakePresent(Employee employee)
     {
         _countOfStoredPresents--;
         _countOfGivenPresents++;
         employee.CountOfPresents += 1;
-        
-        return new Scan
-        {
-            CustomerId = Id,
-            EmployeeId = employee.Id,
-            ScanDate = DateTime.Now
-        };
     }
 }
