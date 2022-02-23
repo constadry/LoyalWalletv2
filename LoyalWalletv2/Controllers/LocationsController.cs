@@ -29,10 +29,19 @@ public class LocationsController : BaseApiController
 
     [HttpGet]
     [Route("{companyId:int}/{address}")]
-    public async Task<Location> GetByName(int companyId, string? address)
+    public async Task<Location> GetByAddress(int companyId, string? address)
     {
         var locations = await ListAsync(companyId);
         return locations.FirstOrDefault(l => l.Address == address) ??
+               throw new LoyalWalletException("Location not found");
+    }
+    
+    [HttpGet]
+    [Route("{companyId:int}/{name}")]
+    public async Task<Location> GetByName(int companyId, string? name)
+    {
+        var locations = await ListAsync(companyId);
+        return locations.FirstOrDefault(l => l.Name == name) ??
                throw new LoyalWalletException("Location not found");
     }
     
