@@ -75,7 +75,8 @@ public class EmployeeController : BaseApiController
     {
         var scans = await ScansList(employeeId, startDate, endDate);
         Debug.Assert(_context.Employees != null, "_context.Customers != null");
-        var query = await _context.Employees.FirstOrDefaultAsync(c => scans.Any(s => s.EmployeeId == c.Id))
+        var query = _context.Employees.ToList()
+                        .FirstOrDefault(c => scans.Any(s => s.EmployeeId == c.Id))
                     ?? throw new LoyalWalletException("Employee not found");
         return query.CountOfStamps;
     }
@@ -85,9 +86,10 @@ public class EmployeeController : BaseApiController
     {
         var scans = await ScansList(employeeId, startDate, endDate);
         Debug.Assert(_context.Employees != null, "_context.Customers != null");
-        var query = await _context.Employees.FirstOrDefaultAsync(c => scans.Any(s => s.EmployeeId == c.Id))
+        var query = _context.Employees.ToList()
+                        .FirstOrDefault(c => scans.Any(s => s.EmployeeId == c.Id))
                     ?? throw new LoyalWalletException("Employee not found");
-        return query.CountOfStamps;
+        return query.CountOfPresents;
     }
     
     private async Task<List<Scan>> ScansList(int employeeId, DateTime? startDate, DateTime? endDate)
