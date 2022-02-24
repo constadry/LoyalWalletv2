@@ -56,8 +56,8 @@ public class CustomerController : BaseApiController
     {
         var scans = await ScansList(companyId, locationName, startDate, endDate);
         Debug.Assert(_context.Customers != null, "_context.Customers != null");
-        var query = _context.Customers.
-            Where(c => scans.Any(s => s.CustomerId == c.Id));
+        var query = _context.Customers.ToList()
+            .Where(c => scans.Any(s => s.CustomerId == c.Id)).ToList();
         return query.Sum(q => q.CountOfStamps);
     }
 
@@ -66,8 +66,8 @@ public class CustomerController : BaseApiController
     {
         var scans = await ScansList(companyId, locationName, startDate, endDate);
         Debug.Assert(_context.Customers != null, "_context.Customers != null");
-        var query = _context.Customers.
-            Where(c => scans.Any(s => s.CustomerId == c.Id));
+        var query = _context.Customers.ToList()
+            .Where(c => scans.Any(s => s.CustomerId == c.Id)).ToList();
 
         return query.Sum(q => q.CountOfStoredPresents);
     }
