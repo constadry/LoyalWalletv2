@@ -137,7 +137,7 @@ public class CompanyController : BaseApiController
                 "application/json");
 
             requestMessage.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
+                new AuthenticationHeaderValue("Bearer", await _tokenService.GetTokenAsync());
     
             // await _httpClient.SendAsync(requestMessage);
         }

@@ -107,7 +107,7 @@ public class OsmiController : BaseApiController
                                                     + $"/activation/sendpin/{phoneNumber}");
         requestMessage.Content = content;
         requestMessage.Headers.Authorization =
-            new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
+            new AuthenticationHeaderValue("Bearer", await _tokenService.GetTokenAsync());
 
         var response = await _httpClient.SendAsync(requestMessage);
         
@@ -152,7 +152,7 @@ public class OsmiController : BaseApiController
         {
             requestMessage.Content = content;
             requestMessage.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
+                new AuthenticationHeaderValue("Bearer", await _tokenService.GetTokenAsync());
     
             await _httpClient.SendAsync(requestMessage);
         }
@@ -233,7 +233,7 @@ public class OsmiController : BaseApiController
                 "application/json");
 
             requestMessage.Headers.Authorization =
-                    new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
+                    new AuthenticationHeaderValue("Bearer", await _tokenService.GetTokenAsync());
 
             await _httpClient.SendAsync(requestMessage);
         }
@@ -261,7 +261,7 @@ public class OsmiController : BaseApiController
                                                    $"?message={mes}" +
                                                    "{link}&sender=OSMICARDS");
         requestMessage.Headers.Authorization =
-            new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
+            new AuthenticationHeaderValue("Bearer", await _tokenService.GetTokenAsync());
         await _httpClient.SendAsync(requestMessage);
     }
 
@@ -281,7 +281,7 @@ public class OsmiController : BaseApiController
             throw new LoyalWalletException($"Invalid value of company id {companyIdQuery}");
 
         Debug.Assert(_context.Customers != null, "_context.Customers != null");
-        var existingCustomer = await _context.Customers
+        var existingCustomer = await _context.Customers.Include(c => c.Company)
                                    .FirstOrDefaultAsync(c => c.SerialNumber == serialNUmber) ??
                                throw new LoyalWalletException("Customer not found");
 
@@ -346,7 +346,7 @@ public class OsmiController : BaseApiController
             "application/json");
 
         requestMessage.Headers.Authorization =
-            new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
+            new AuthenticationHeaderValue("Bearer", await _tokenService.GetTokenAsync());
     
         await _httpClient.SendAsync(requestMessage);
     }
@@ -375,7 +375,7 @@ public class OsmiController : BaseApiController
             "application/json");
 
         requestMessage.Headers.Authorization =
-            new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
+            new AuthenticationHeaderValue("Bearer", await _tokenService.GetTokenAsync());
     
         await _httpClient.SendAsync(requestMessage);
     }

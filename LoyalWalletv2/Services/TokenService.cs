@@ -1,6 +1,6 @@
+using System.Diagnostics;
 using System.Text;
-using System.Text.Json;
-
+using Newtonsoft.Json;
 namespace LoyalWalletv2.Services;
 
 public class TokenService : ITokenService
@@ -12,7 +12,7 @@ public class TokenService : ITokenService
         _httpClient = httpClient;
     }
     
-    public async Task<string> GetToken()
+    public async Task<string?> GetTokenAsync()
     {
         var values = new Dictionary<string, object?>
         {
@@ -24,20 +24,26 @@ public class TokenService : ITokenService
             }
         };
 
-        var serializedValues = JsonSerializer.Serialize(values);
+        var serializedValues = JsonConvert.SerializeObject(values);
 
         using var requestMessage =
-            new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix);
+            new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix + "/getToken");
         requestMessage.Content = new StringContent(
             serializedValues,
             Encoding.UTF8,
             "application/json");
 
         var response = await _httpClient.SendAsync(requestMessage);
-        
-        var responseSerialised = await response.Content.ReadAsStringAsync();
-        var (_, token) = JsonSerializer.Deserialize<KeyValuePair<string, string>>(responseSerialised);
 
-        return token;
+        var responseSerialised = await response.Content.ReadAsStringAsync();
+        var container = JsonConvert.DeserializeObject<Container>(responseSerialised);
+
+        Debug.Assert(container != null, nameof(container) + " != null");
+        return container.Token;
     }
+}
+
+public class Container
+{
+    public string? Token { get; set; }
 }
