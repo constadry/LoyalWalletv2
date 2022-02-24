@@ -9,5 +9,6 @@ public class Location
     public string? Name { get; set; }
     [Required] public int CompanyId { get; set; }
     public List<Employee>? Employees { get; set; }
+    public DateTime PayUpDate { get; set; }
     public bool Archived { get; set; }
 }
