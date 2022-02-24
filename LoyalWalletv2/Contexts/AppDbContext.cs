@@ -20,4 +20,24 @@ public sealed class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Company>? Companies { get; set; }
     public DbSet<Code>? Codes { get; set; }
     public DbSet<Scan>? Scans { get; set; }
+    
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<Customer>()
+            .Property(b => b.CountOfStamps)
+            .HasField("_countOfStamps");
+        
+        modelBuilder.Entity<Customer>()
+            .Property(b => b.CountOfPurchases)
+            .HasField("_countOfPurchases");
+        
+        modelBuilder.Entity<Customer>()
+            .Property(b => b.CountOfGivenPresents)
+            .HasField("_countOfGivenPresents");
+        
+        modelBuilder.Entity<Customer>()
+            .Property(b => b.CountOfStoredPresents)
+            .HasField("_countOfStoredPresents");
+    }
 }
