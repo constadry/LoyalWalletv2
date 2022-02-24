@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace LoyalWalletv2.Domain.Models;
 
@@ -26,17 +27,24 @@ public class Customer
     public Company? Company { get; set; }
 
     public bool Confirmed { get; set; }
-
+    
+    [BackingField(nameof(_countOfStamps))]
     public uint CountOfStamps => _countOfStamps;
+
+    [BackingField(nameof(_countOfPurchases))]
     public uint CountOfPurchases => _countOfPurchases;
+
+    [BackingField(nameof(_countOfStoredPresents))]
     public uint CountOfStoredPresents => _countOfStoredPresents;
+
+    [BackingField(nameof(_countOfGivenPresents))]
     public uint CountOfGivenPresents => _countOfGivenPresents;
     public DateTime FirstTimePurchase { get; set; }
     public DateTime LastTimePurchase { get; set; }
 
     public void DoStamp(Employee employee)
     {
-        if (Company != null && CountOfStamps + 1 == Company.MaxCountOfStamps)
+        if (CountOfStamps + 1 == Company.MaxCountOfStamps)
         {
             _countOfStamps = 0;
             _countOfStoredPresents++;
