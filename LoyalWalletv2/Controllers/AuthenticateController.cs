@@ -11,6 +11,7 @@ using LoyalWalletv2.Resources;
 using LoyalWalletv2.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 namespace LoyalWalletv2.Controllers;
@@ -182,6 +183,32 @@ public class AuthenticateController : BaseApiController
         return Ok(new Response { Status = "Success", Message = "User confirmed successfully!" });
     }
 
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordResource changePasswordResource)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.CompanyId == changePasswordResource.CompanyId);
+
+        if (user == null || !await _userManager
+                .CheckPasswordAsync(user, changePasswordResource.OldPassword) || !user.EmailConfirmed)
+            return Unauthorized();
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+        var result = await _userManager.ResetPasswordAsync(user, token, changePasswordResource.NewPassword);
+        
+        if (!result.Succeeded)
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new Response
+                {
+                    Status = "Error",
+                    Message = "User confirmation failed! Please check user details and try again."
+                });
+
+        return Ok(new Response { Status = "Success", Message = "User confirmed successfully!" });
+    }
+
     private async Task<Company> CreateCompanyAsync()
     {
         var model = new Company();
@@ -253,10 +280,10 @@ public class AuthenticateController : BaseApiController
                 Encoding.UTF8,
                 "application/json");
 
-            requestMessage.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
+            // requestMessage.Headers.Authorization =
+                // new AuthenticationHeaderValue("Bearer", await _tokenService.GetToken());
     
-            await _httpClient.SendAsync(requestMessage);
+            // await _httpClient.SendAsync(requestMessage);
         }
 
         return result.Entity;

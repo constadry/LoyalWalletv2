@@ -36,10 +36,8 @@ public class CustomWebApplicationFactory<TStartup>
             var db = scopedServices.GetRequiredService<AppDbContext>();
             var logger = scopedServices
                 .GetRequiredService<ILogger<CustomWebApplicationFactory<TStartup>>>();
-
-            db.Database.EnsureDeleted();
+            // db.Database.EnsureDeleted();
             db.Database.EnsureCreated();
-
             try
             {
                 Debug.Assert(db.Locations != null, "db.Locations != null");
@@ -72,9 +70,24 @@ public class CustomWebApplicationFactory<TStartup>
                 {
                     CompanyId = 1,
                     EmployeeId = 1,
-                    CustomerId = 1
+                    CustomerId = 1,
+                    // ScanDate = DateTime.Now
                 });
                 customer.DoStamp(employee);
+                // customer.DoStamp(employee);
+                // customer.DoStamp(employee);
+                // customer.DoStamp(employee);
+                // customer.DoStamp(employee);
+                // customer.DoStamp(employee);
+                // customer.TakePresent(employee);
+                // logger.LogInformation("count {Count}", customer.CountOfGivenPresents);
+                // db.Scans.Add(new Scan
+                // {
+                //     CompanyId = 1,
+                //     EmployeeId = 1,
+                //     CustomerId = 1,
+                //     ScanDate = DateTime.Now
+                // });
                 db.Customers.Add(customer);
                 db.SaveChanges();
             }
