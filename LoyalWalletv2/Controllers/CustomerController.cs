@@ -69,7 +69,7 @@ public class CustomerController : BaseApiController
         var query = _context.Customers.ToList()
             .Where(c => scans.Any(s => s.CustomerId == c.Id)).ToList();
 
-        return query.Sum(q => q.CountOfStoredPresents);
+        return query.Sum(q => q.CountOfGivenPresents);
     }
 
     [HttpPut("take-present/{id:int}/{employeeId:int}")]
