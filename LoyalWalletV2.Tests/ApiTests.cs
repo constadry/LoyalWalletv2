@@ -175,6 +175,33 @@ public class ApiTests
         _testOutputHelper.WriteLine($"Generated code: {token}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+
+    [Fact]
+    public async void CheckCode()
+    {
+        var values = new Dictionary<string, string>
+        {
+            { "token", "1bd29cf9d4d720b7d17ffa50d42309bf2b3c05d2" },
+            { "pin", "2784" }
+        };
+
+        var serializedValues = System.Text.Json.JsonSerializer.Serialize(values);
+
+        using var requestMessage =
+            new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
+                                                    + "/activation/checkpin");
+        requestMessage.Content = new StringContent(
+            serializedValues,
+            Encoding.UTF8,
+            "application/json");
+        requestMessage.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", await _tokenService.GetTokenAsync());
+    
+        var response = await _httpClient.SendAsync(requestMessage);
+
+        _testOutputHelper.WriteLine($"Response body - {await response.Content.ReadAsStringAsync()}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
 }
 
 public class Container

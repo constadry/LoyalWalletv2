@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -152,21 +153,26 @@ public class OsmiController : BaseApiController
             { "pin", $"{confirmationCode}" }
         };
 
-        var content = new FormUrlEncodedContent(values);
+        var serializedValues = JsonSerializer.Serialize(values);
 
         using (var requestMessage =
                new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
                                                        + "/activation/checkpin"))
         {
-            requestMessage.Content = content;
+            requestMessage.Content = new StringContent(
+                serializedValues,
+                Encoding.UTF8,
+                "application/json");
             requestMessage.Headers.Authorization =
                 new AuthenticationHeaderValue("Bearer", await _tokenService.GetTokenAsync());
-    
-            await _httpClient.SendAsync(requestMessage);
-        }
 
-        if (sentCodeInfo.ConfirmationCode != confirmationCode)
-            throw new LoyalWalletException("Not valid confirmation code");
+            var response = await _httpClient.SendAsync(requestMessage);
+            if (response.StatusCode != HttpStatusCode.OK)
+            {
+                _logger.LogInformation("Response body - {Body}", await response.Content.ReadAsStringAsync());
+                throw new LoyalWalletException("Confirmation's failed");
+            }
+        }
 
         Debug.Assert(_context.Customers != null, "_context.Customers != null");
         var addedCustomer = await _context.Customers
