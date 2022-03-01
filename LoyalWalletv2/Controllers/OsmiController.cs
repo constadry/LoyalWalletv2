@@ -100,19 +100,22 @@ public class OsmiController : BaseApiController
             { "length", "4" }
         };
 
-        var content = new FormUrlEncodedContent(values);
+        var serializedValues = JsonSerializer.Serialize(values);
 
         using var requestMessage =
             new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
                                                     + $"/activation/sendpin/{phoneNumber}");
-        requestMessage.Content = content;
+        requestMessage.Content = new StringContent(
+            serializedValues,
+            Encoding.UTF8,
+            "application/json");
         requestMessage.Headers.Authorization =
             new AuthenticationHeaderValue("Bearer", await _tokenService.GetTokenAsync());
 
         var response = await _httpClient.SendAsync(requestMessage);
         
         var responseSerialised = await response.Content.ReadAsStringAsync();
-        var (_, token) = JsonSerializer.Deserialize<KeyValuePair<string, string>>(responseSerialised);
+        var token = Newtonsoft.Json.JsonConvert.DeserializeObject<Container>(responseSerialised)?.Token;
 
         _logger.LogInformation("Generated code: {Code}", token);
 
@@ -126,6 +129,11 @@ public class OsmiController : BaseApiController
         Debug.Assert(_context.Codes != null, "_context.Codes != null");
         await _context.Codes.AddAsync(code);
         await _context.SaveChangesAsync();
+    }
+
+    public class Container
+    {
+        public string? Token { get; set; }
     }
 
     [HttpGet]
@@ -231,7 +239,7 @@ public class OsmiController : BaseApiController
         using (var requestMessage =
                new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
                                                        + $"/passes/{existingCustomer.SerialNumber}" +
-                                                       $"/finecard{existingCustomer.Company.Id}?withValues=true"))
+                                                       $"/{existingCustomer.Company.Id}?withValues=true"))
         {
             requestMessage.Content = new StringContent(
                 serializedValues,

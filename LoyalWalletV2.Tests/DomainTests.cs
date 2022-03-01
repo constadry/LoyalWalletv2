@@ -200,7 +200,7 @@ public class DomainTests
 
         using var requestMessage =
             new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
-                                                    + $"/templates/finecard{cardOptions.CompanyId}");
+                                                    + $"/templates/{cardOptions.CompanyId}");
         requestMessage.Content = new StringContent(
             serializedValues,
             Encoding.UTF8,
@@ -339,7 +339,7 @@ public class DomainTests
         using var requestMessage =
             new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
                                                     + $"/passes/{existingCustomer.SerialNumber}" +
-                                                    $"/finecard{existingCustomer.Company.Id}?withValues=true");
+                                                    $"/{existingCustomer.Company.Id}?withValues=true");
         requestMessage.Content = new StringContent(
             serializedValues,
             Encoding.UTF8,

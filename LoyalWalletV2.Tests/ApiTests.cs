@@ -1,10 +1,15 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using LoyalWalletv2;
+using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
+using LoyalWalletv2.Services;
 using LoyalWalletV2.Tests.Extensions;
 using Newtonsoft.Json;
 using Xunit;
@@ -15,10 +20,14 @@ namespace LoyalWalletV2.Tests;
 public class ApiTests
 {
     private readonly ITestOutputHelper _testOutputHelper;
+    private readonly ITokenService _tokenService;
+    private readonly HttpClient _httpClient;
 
     public ApiTests(ITestOutputHelper testOutputHelper)
     {
         _testOutputHelper = testOutputHelper;
+        _httpClient = new HttpClient();
+        _tokenService = new TokenService(_httpClient);
     }
 
     [Fact]
@@ -132,6 +141,45 @@ public class ApiTests
     //     _testOutputHelper.WriteLine(responseSerialised);
     //     return JsonConvert.DeserializeObject<LoginResponse>(responseSerialised);
     // }
+
+    [Fact]
+    public async void CodeGenerate()
+    {
+        const string phoneNumber = "+79518270540";
+
+        var values = new Dictionary<string, string>
+        {
+            { "smsText", "Ваш пинкод для транзакции {pin}" },
+            { "length", "4" }
+        };
+
+        var serializedValues = System.Text.Json.JsonSerializer.Serialize(values);
+        
+        _testOutputHelper.WriteLine(serializedValues);
+
+        using var requestMessage =
+            new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
+                                                    + $"/activation/sendpin/{phoneNumber}");
+        requestMessage.Content = new StringContent(
+            serializedValues,
+            Encoding.UTF8,
+            "application/json");
+        requestMessage.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", await _tokenService.GetTokenAsync());
+
+        var response = await _httpClient.SendAsync(requestMessage);
+        
+        var responseSerialised = await response.Content.ReadAsStringAsync();
+        var token = JsonConvert.DeserializeObject<Container>(responseSerialised)?.Token;
+
+        _testOutputHelper.WriteLine($"Generated code: {token}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+}
+
+public class Container
+{
+    public string? Token { get; set; }
 }
 
 public class LoginResponse
