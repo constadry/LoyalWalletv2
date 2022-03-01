@@ -199,4 +199,47 @@ public class DomainTests
         _testOutputHelper.WriteLine($"Response body - {await response.Content.ReadAsStringAsync()}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+
+    [Fact]
+    public async void Push()
+    {
+        var pushResource = new PushResource
+        {
+            Message = "Hi",
+            SerialNumbers = new List<string>()
+            {
+                "123456",
+                "543211"
+            }
+        };
+        var values = new Dictionary<string, object?>
+        {
+            {
+                "message", pushResource.Message
+            },
+            {
+                "serials", pushResource.SerialNumbers
+            }
+        };
+
+        var serializedValues = System.Text.Json.JsonSerializer.Serialize(values);
+        
+        _testOutputHelper.WriteLine(serializedValues);
+
+        using var requestMessage =
+            new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix + 
+                                                    "/marketing/pushmessage");
+        requestMessage.Content = new StringContent(
+            serializedValues,
+            Encoding.UTF8,
+            "application/json");
+
+        requestMessage.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", await _tokenService.GetTokenAsync());
+    
+        var response = await _httpClient.SendAsync(requestMessage);
+
+        _testOutputHelper.WriteLine($"Response body - {await response.Content.ReadAsStringAsync()}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
 }
