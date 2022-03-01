@@ -311,23 +311,23 @@ public class OsmiController : BaseApiController
             {
                 new
                 {
-                    Label = "Client's id", 
-                    Value = $"{existingCustomer.Id}"
+                    label = "Client's id", 
+                    value = $"{existingCustomer.Id}"
                 },
                 new
                 {
-                    Label = "Количество штампов",
-                    Value = $"{existingCustomer.CountOfStamps} / {existingCustomer.Company.MaxCountOfStamps}"
+                    label = "Количество штампов",
+                    value = $"{existingCustomer.CountOfStamps} / {existingCustomer.Company.MaxCountOfStamps}"
                 },
                 new
                 {
-                    Label = "Номер телефона",
-                    Value = $"{existingCustomer.PhoneNumber}"
+                    label = "Номер телефона",
+                    value = $"{existingCustomer.PhoneNumber}"
                 },
                 new
                 {
-                    Label = "Id ресторана",
-                    Value = $"{existingCustomer.CompanyId}"
+                    label = "Id ресторана",
+                    value = $"{existingCustomer.CompanyId}"
                 },
             }},
         };
@@ -338,7 +338,7 @@ public class OsmiController : BaseApiController
 
         using var requestMessage =
             new HttpRequestMessage(HttpMethod.Put, OsmiInformation.HostPrefix
-                                                   + $"passes/{existingCustomer.SerialNumber}" +
+                                                   + $"/passes/{existingCustomer.SerialNumber}" +
                                                    $"/{existingCustomer.Company.Name}?push=true");
         requestMessage.Content = new StringContent(
             serializedValues,
@@ -368,7 +368,8 @@ public class OsmiController : BaseApiController
         var serializedValues = JsonSerializer.Serialize(values);
 
         using var requestMessage =
-            new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix);
+            new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix + 
+                                                    "/marketing/pushmessage");
         requestMessage.Content = new StringContent(
             serializedValues,
             Encoding.UTF8,
