@@ -185,36 +185,42 @@ public class OsmiController : BaseApiController
         Debug.Assert(existingCustomer.Company != null, "existingCustomer.Company != null");
         var values = new Dictionary<string, object>
         {
-            { "noSharing", "false" },
-            { "values", new []
+            { "noSharing", false },
+            { "values", new object[]
             {
                 new
                 {
-                    Label = "Client's id", 
-                    Value = $"{existingCustomer.Id}"
+                    label = "Серийный номер клиента", 
+                    value = $"{existingCustomer.Id}",
+                    hideLabel = false,
+                    forExistingCards = true,
+                    key = "H1"
                 },
                 new
                 {
-                    Label = "Количество штампов",
-                    Value = $"{existingCustomer.CountOfStamps} / {existingCustomer.Company.MaxCountOfStamps}"
+                    label = "Количество штампов",
+                    value = $"{existingCustomer.CountOfStamps} / {existingCustomer.Company.MaxCountOfStamps}", 
+                    changeMsg = "ваши баллы %@",
+                    hideLabel = false,
+                    forExistingCards = false,
+                    //key to change location on the card
+                    key = "P1"
                 },
                 new
                 {
-                    Label = "Номер телефона",
-                    Value = $"{existingCustomer.PhoneNumber}"
-                },
-                new
-                {
-                    Label = "Id ресторана",
-                    Value = $"{existingCustomer.CompanyId}"
-                },
+                    label = "Номер телефона",
+                    value = $"{existingCustomer.PhoneNumber}",
+                    hideLabel = false,
+                    forExistingCards = true,
+                    key = "B1"
+                }, 
             }},
             { 
                 "barcode", 
                 new
                 {
-                    Message = barcode
-                } 
+                    message = barcode
+                }
             }
         };
 
@@ -224,8 +230,8 @@ public class OsmiController : BaseApiController
 
         using (var requestMessage =
                new HttpRequestMessage(HttpMethod.Post, OsmiInformation.HostPrefix
-                                                       + $"passes/{existingCustomer.SerialNumber}" +
-                                                       $"/{existingCustomer.Company.Name}?withValues=true"))
+                                                       + $"/passes/{existingCustomer.SerialNumber}" +
+                                                       $"/finecard{existingCustomer.Company.Id}?withValues=true"))
         {
             requestMessage.Content = new StringContent(
                 serializedValues,
