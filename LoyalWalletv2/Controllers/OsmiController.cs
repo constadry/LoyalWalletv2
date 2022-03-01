@@ -327,27 +327,33 @@ public class OsmiController : BaseApiController
         Debug.Assert(existingCustomer.Company != null, "existingCustomer.Company != null");
         var values = new Dictionary<string, object>
         {
-            { "values", new []
+            { "values", new object[]
             {
                 new
                 {
-                    label = "Client's id", 
-                    value = $"{existingCustomer.Id}"
+                    label = "Серийный номер клиента", 
+                    value = $"{existingCustomer.Id}",
+                    hideLabel = false,
+                    forExistingCards = true,
+                    key = "H1"
                 },
                 new
                 {
                     label = "Количество штампов",
-                    value = $"{existingCustomer.CountOfStamps} / {existingCustomer.Company.MaxCountOfStamps}"
+                    value = $"{existingCustomer.CountOfStamps} / {existingCustomer.Company.MaxCountOfStamps}", 
+                    changeMsg = "ваши баллы %@",
+                    hideLabel = false,
+                    forExistingCards = false,
+                    //key to change location on the card
+                    key = "P1"
                 },
                 new
                 {
                     label = "Номер телефона",
-                    value = $"{existingCustomer.PhoneNumber}"
-                },
-                new
-                {
-                    label = "Id ресторана",
-                    value = $"{existingCustomer.CompanyId}"
+                    value = $"{existingCustomer.PhoneNumber}",
+                    hideLabel = false,
+                    forExistingCards = true,
+                    key = "B1"
                 },
             }},
         };

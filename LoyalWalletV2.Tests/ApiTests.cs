@@ -6,11 +6,13 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 using LoyalWalletv2;
 using LoyalWalletv2.Domain.Models;
 using LoyalWalletv2.Domain.Models.AuthenticationModels;
 using LoyalWalletv2.Services;
 using LoyalWalletV2.Tests.Extensions;
+using LoyalWalletv2.Tools;
 using Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -199,6 +201,100 @@ public class ApiTests
     
         var response = await _httpClient.SendAsync(requestMessage);
 
+        _testOutputHelper.WriteLine($"Response body - {await response.Content.ReadAsStringAsync()}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async void ScanCard()
+    {
+        const string uri = "https://api-dev.osmicards.com/v2t/?serial_number=12345&company_id=1";
+        var uriParam = new Uri(uri);
+        var uriCollection = HttpUtility.ParseQueryString(uriParam.Query);
+        var serialNumberQuery = uriCollection.Get("serial_number");
+        var companyIdQuery = uriCollection.Get("company_id");
+
+        if (!int.TryParse(serialNumberQuery, out var serialNumber))
+            throw new LoyalWalletException($"Invalid value of serial number {serialNumberQuery}");
+        
+        if (!int.TryParse(companyIdQuery, out var companyId))
+            throw new LoyalWalletException($"Invalid value of company id {companyIdQuery}");
+        
+        _testOutputHelper.WriteLine($"{serialNumber} {companyId}");
+
+        var existingCustomer = new Customer
+        {
+            PhoneNumber = "+79518270540",
+            Company = new Company
+            {
+                Name = "A",
+                Id = 1
+            },
+            CompanyId = 1,
+            Confirmed = true,
+            SerialNumber = 12345
+        };
+
+        var employee = new Employee
+        {
+            Id = 1,
+            CompanyId = 1,
+        };
+
+        existingCustomer.DoStamp(employee);
+
+        Debug.Assert(existingCustomer.Company != null, "existingCustomer.Company != null");
+        var values = new Dictionary<string, object>
+        {
+            { "values", new object[]
+            {
+                new
+                {
+                    label = "Серийный номер клиента", 
+                    value = $"{existingCustomer.Id}",
+                    hideLabel = false,
+                    forExistingCards = true,
+                    key = "H1"
+                },
+                new
+                {
+                    label = "Количество штампов",
+                    value = $"{existingCustomer.CountOfStamps} / {existingCustomer.Company.MaxCountOfStamps}", 
+                    changeMsg = "ваши баллы %@",
+                    hideLabel = false,
+                    forExistingCards = false,
+                    //key to change location on the card
+                    key = "P1"
+                },
+                new
+                {
+                    label = "Номер телефона",
+                    value = $"{existingCustomer.PhoneNumber}",
+                    hideLabel = false,
+                    forExistingCards = true,
+                    key = "B1"
+                },
+            }},
+        };
+
+        var serializedValues = System.Text.Json.JsonSerializer.Serialize(values);
+
+        _testOutputHelper.WriteLine($"values: {serializedValues}");
+
+        using var requestMessage =
+            new HttpRequestMessage(HttpMethod.Put, OsmiInformation.HostPrefix
+                                                   + $"/passes/{existingCustomer.SerialNumber}" +
+                                                   $"/{existingCustomer.Company.Name}?push=true");
+        requestMessage.Content = new StringContent(
+            serializedValues,
+            Encoding.UTF8,
+            "application/json");
+
+        requestMessage.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", await _tokenService.GetTokenAsync());
+        
+        var response = await _httpClient.SendAsync(requestMessage);
+    
         _testOutputHelper.WriteLine($"Response body - {await response.Content.ReadAsStringAsync()}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
